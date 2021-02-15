@@ -2,10 +2,10 @@
 #include "utils.h"
 
 // use this variable to create unique picture name while saving in SD card
-// int pictureNumberSaving;
+int pictureNumberSaving;
 
 // // use this variable to keep track of picture(s) that has been sent to phone
-// int pictureNumberTransmitted;
+int pictureNumberTransmitted;
 
 
 /**

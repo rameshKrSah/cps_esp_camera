@@ -7,8 +7,6 @@
  * 4. Send and receive other information to/from phone over Bluetooth.
  * 5. Remain in the deep sleep mode unless work is to be done.
  * 6. Maintain a RTC for time keeping. Query time over internet maybe at each reset.
- * 
- * 
  */
 
 /*
@@ -17,6 +15,9 @@
  */
 
 
+#include "utils.h"
+#include "camera.h"
+#include "sd_card.h"
 
 #include "esp_camera.h"
 #include "Arduino.h"
@@ -28,27 +29,27 @@
 #include <EEPROM.h>            // read and write from flash memory
 //#include <SoftwareSerial.h> 
 
-// define the number of bytes you want to access
-#define EEPROM_SIZE 2
+// // define the number of bytes you want to access
+// #define EEPROM_SIZE 2
 
-// Pin definition for CAMERA_MODEL_AI_THINKER
-#define PWDN_GPIO_NUM     32
-#define RESET_GPIO_NUM    -1
-#define XCLK_GPIO_NUM      0
-#define SIOD_GPIO_NUM     26
-#define SIOC_GPIO_NUM     27
+// // Pin definition for CAMERA_MODEL_AI_THINKER
+// #define PWDN_GPIO_NUM     32
+// #define RESET_GPIO_NUM    -1
+// #define XCLK_GPIO_NUM      0
+// #define SIOD_GPIO_NUM     26
+// #define SIOC_GPIO_NUM     27
 
-#define Y9_GPIO_NUM       35
-#define Y8_GPIO_NUM       34
-#define Y7_GPIO_NUM       39
-#define Y6_GPIO_NUM       36
-#define Y5_GPIO_NUM       21
-#define Y4_GPIO_NUM       19
-#define Y3_GPIO_NUM       18
-#define Y2_GPIO_NUM        5
-#define VSYNC_GPIO_NUM    25
-#define HREF_GPIO_NUM     23
-#define PCLK_GPIO_NUM     22
+// #define Y9_GPIO_NUM       35
+// #define Y8_GPIO_NUM       34
+// #define Y7_GPIO_NUM       39
+// #define Y6_GPIO_NUM       36
+// #define Y5_GPIO_NUM       21
+// #define Y4_GPIO_NUM       19
+// #define Y3_GPIO_NUM       18
+// #define Y2_GPIO_NUM        5
+// #define VSYNC_GPIO_NUM    25
+// #define HREF_GPIO_NUM     23
+// #define PCLK_GPIO_NUM     22
 
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP  10        /* Time ESP32 will go to sleep (in seconds) */
@@ -58,20 +59,20 @@
  * maintain this value between resets
  */
 // use this variable to create unique picture name while saving in SD card
-RTC_DATA_ATTR int pictureNumberSaving = 0;
+// RTC_DATA_ATTR int pictureNumberSaving = 0;
 
-// use this variable to keep track of picture(s) that has been sent to phone
-RTC_DATA_ATTR int pictureNumberTransmitted = 0;
+// // use this variable to keep track of picture(s) that has been sent to phone
+// RTC_DATA_ATTR int pictureNumberTransmitted = 0;
 
 // Whether to print debug over serial or not
-#define DEBUG true
-#define STATUS_OK 1
-#define STATUS_NOT_OK -1
+//#define DEBUG true
+// #define STATUS_OK 1
+// #define STATUS_NOT_OK -1
 
 
 // what are these for
-File photoFile; 
-int global_i;
+// File photoFile; 
+// int global_i;
 
 
 /*
@@ -104,136 +105,136 @@ bool btConnectionFlag = false;
  * This is our debug function that spits out messages and errors 
  * to the serial monitor
  */
-void debug(const char * message){
-  if (DEBUG) {
-    Serial.println(message);
-  }
-}
+//void debug(const char * message){
+//  if (DEBUG) {
+//    Serial.println(message);
+//  }
+//}
 
 /*
  * When the ESP32-CAM takes a photo, it flashes the on-board LED. 
  * After taking the photo, the LED remains on, so we send 
  * instructions to turn it off. The LED is connected to GPIO 4.
  */
-void manageOnBoardLED() {  
-  pinMode(4, INPUT);
-  digitalWrite(4, LOW);
-  rtc_gpio_hold_dis(GPIO_NUM_4);
-}
+// void manageOnBoardLED() {  
+//   pinMode(4, INPUT);
+//   digitalWrite(4, LOW);
+//   rtc_gpio_hold_dis(GPIO_NUM_4);
+// }
 
 /*
  * Initialize the camera with proper setting
  */
-esp_err_t setup_camera() {
-  // configure the camera module
-  camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL_0;
-  config.ledc_timer = LEDC_TIMER_0;
-  config.pin_d0 = Y2_GPIO_NUM;
-  config.pin_d1 = Y3_GPIO_NUM;
-  config.pin_d2 = Y4_GPIO_NUM;
-  config.pin_d3 = Y5_GPIO_NUM;
-  config.pin_d4 = Y6_GPIO_NUM;
-  config.pin_d5 = Y7_GPIO_NUM;
-  config.pin_d6 = Y8_GPIO_NUM;
-  config.pin_d7 = Y9_GPIO_NUM;
-  config.pin_xclk = XCLK_GPIO_NUM;
-  config.pin_pclk = PCLK_GPIO_NUM;
-  config.pin_vsync = VSYNC_GPIO_NUM;
-  config.pin_href = HREF_GPIO_NUM;
-  config.pin_sscb_sda = SIOD_GPIO_NUM;
-  config.pin_sscb_scl = SIOC_GPIO_NUM;
-  config.pin_pwdn = PWDN_GPIO_NUM;
-  config.pin_reset = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 20000000;
-  config.pixel_format = PIXFORMAT_JPEG; 
+// esp_err_t setup_camera() {
+//   // configure the camera module
+//   camera_config_t config;
+//   config.ledc_channel = LEDC_CHANNEL_0;
+//   config.ledc_timer = LEDC_TIMER_0;
+//   config.pin_d0 = Y2_GPIO_NUM;
+//   config.pin_d1 = Y3_GPIO_NUM;
+//   config.pin_d2 = Y4_GPIO_NUM;
+//   config.pin_d3 = Y5_GPIO_NUM;
+//   config.pin_d4 = Y6_GPIO_NUM;
+//   config.pin_d5 = Y7_GPIO_NUM;
+//   config.pin_d6 = Y8_GPIO_NUM;
+//   config.pin_d7 = Y9_GPIO_NUM;
+//   config.pin_xclk = XCLK_GPIO_NUM;
+//   config.pin_pclk = PCLK_GPIO_NUM;
+//   config.pin_vsync = VSYNC_GPIO_NUM;
+//   config.pin_href = HREF_GPIO_NUM;
+//   config.pin_sscb_sda = SIOD_GPIO_NUM;
+//   config.pin_sscb_scl = SIOC_GPIO_NUM;
+//   config.pin_pwdn = PWDN_GPIO_NUM;
+//   config.pin_reset = RESET_GPIO_NUM;
+//   config.xclk_freq_hz = 20000000;
+//   config.pixel_format = PIXFORMAT_JPEG; 
 
-  // set the frame size and picture quality
-  if(psramFound()){
-    debug("frame size: UXGA, quality: 12");
-    config.frame_size = FRAMESIZE_UXGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
-    config.jpeg_quality = 10;
-    config.fb_count = 2;
-  } else {
-    debug("frame size: SVGA, quality: 12");
-    config.frame_size = FRAMESIZE_SVGA;
-    config.jpeg_quality = 12;
-    config.fb_count = 1;
-  }
+//   // set the frame size and picture quality
+//   if(psramFound()){
+//     debug("frame size: UXGA, quality: 12");
+//     config.frame_size = FRAMESIZE_UXGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
+//     config.jpeg_quality = 10;
+//     config.fb_count = 2;
+//   } else {
+//     debug("frame size: SVGA, quality: 12");
+//     config.frame_size = FRAMESIZE_SVGA;
+//     config.jpeg_quality = 12;
+//     config.fb_count = 1;
+//   }
   
-  debug("starting camera");
-  return esp_camera_init(&config);
-}
+//   debug("starting camera");
+//   return esp_camera_init(&config);
+// }
 
 /*
  * Initialize the SD card module
  */
-boolean setup_sd_card(){
- // start SD card and verify for the card.
-  debug("starting SD card");
-  if(!SD_MMC.begin()){
-    debug("sd card mount failed");
-    return false;
-  }
+// boolean setup_sd_card(){
+//  // start SD card and verify for the card.
+//   debug("starting SD card");
+//   if(!SD_MMC.begin()){
+//     debug("sd card mount failed");
+//     return false;
+//   }
   
-  uint8_t cardType = SD_MMC.cardType();
-  if(cardType == CARD_NONE){
-    debug("no sd card attached");
-    return false;
-  } 
+//   uint8_t cardType = SD_MMC.cardType();
+//   if(cardType == CARD_NONE){
+//     debug("no sd card attached");
+//     return false;
+//   } 
 
-  return true;
-}
+//   return true;
+// }
 
 /*
  * Return the pointer to camera buffer with content of latest photo. 
  * The structure also has a timeStamp variable. Can we use this to infer 
  * the time at which the photo was taken.
  */
-camera_fb_t * takePicture() {
-  // pointer to camera frame buffer object
-  camera_fb_t * fb = NULL;
+// camera_fb_t * takePicture() {
+//   // pointer to camera frame buffer object
+//   camera_fb_t * fb = NULL;
 
-  // get the pointer to the camera frame buffer which has the content of latest photo
-  fb = esp_camera_fb_get();  
-  if(!fb) {
-    debug("camera capture failed, trying again");
-    fb = esp_camera_fb_get();
-    if(!fb) {
-      debug("camera capture failed again");
-      return NULL;
-    }
-  }
-  return fb;
-}
+//   // get the pointer to the camera frame buffer which has the content of latest photo
+//   fb = esp_camera_fb_get();  
+//   if(!fb) {
+//     debug("camera capture failed, trying again");
+//     fb = esp_camera_fb_get();
+//     if(!fb) {
+//       debug("camera capture failed again");
+//       return NULL;
+//     }
+//   }
+//   return fb;
+// }
 
 /*
  * Save the content of the camera buffer in the SD card.
  */
-boolean saveToCard(camera_fb_t * fb) {
-    // Path where new picture will be saved in SD Card
-    String path = "/picture" + String(pictureNumberSaving) +".jpg";
-    debug("new picture file name: ");
-    debug(path.c_str());
+// boolean saveToCard(camera_fb_t * fb) {
+//     // Path where new picture will be saved in SD Card
+//     String path = "/picture" + String(pictureNumberSaving) +".jpg";
+//     debug("new picture file name: ");
+//     debug(path.c_str());
 
-    // get the file object to write the image data to SD card
-    fs::FS &fs = SD_MMC; 
-    File file = fs.open(path.c_str(), FILE_WRITE);
+//     // get the file object to write the image data to SD card
+//     fs::FS &fs = SD_MMC; 
+//     File file = fs.open(path.c_str(), FILE_WRITE);
     
-    if(!file){
-      debug("failed to open file in writing mode");
-      return false;
-    }
-    else {
-      file.write(fb->buf, fb->len); // payload (image), payload length
-      debug("saved image to path: ");
-      debug(path.c_str());
-    }
+//     if(!file){
+//       debug("failed to open file in writing mode");
+//       return false;
+//     }
+//     else {
+//       file.write(fb->buf, fb->len); // payload (image), payload length
+//       debug("saved image to path: ");
+//       debug(path.c_str());
+//     }
 
-    // close the file
-    file.close();
-    return true;
-}
+//     // close the file
+//     file.close();
+//     return true;
+// }
 
 /*
  * Get text description of the SPP status enum.
@@ -433,7 +434,7 @@ void setup() {
   debug("configuring services");
 
   // Turn off the on board LED
-  manageOnBoardLED();
+  turn_off_camera_flash();
   
   // initialize the Bluetooth
   if(!setupBluetooth())
@@ -443,13 +444,13 @@ void setup() {
   }
   
   // initialize the camera module
-   if (setup_camera() != ESP_OK) {
+   if (init_camera() != ESP_OK) {
     debug("camera init failed");
     return;
   }
 
   // initialize the SD module
-  if(!setup_sd_card()) {
+  if(!init_sd_card()) {
     debug("sd card init failed");
     return; 
   }
@@ -472,10 +473,10 @@ void loop() {
   }
   
   // strucutre that holds the camera data
-  camera_fb_t * fb = takePicture();
+  camera_fb_t * fb = take_picture();
   
   // Turn off the on board LED
-  manageOnBoardLED();
+  turn_off_camera_flash();
 
   
   // send the read image to the Phone via Bluetooth
@@ -484,10 +485,8 @@ void loop() {
 
   
 //  // if we have a picture, try to store it in the SD card.
-//  if (fb != NULL) {
-//    if(!saveToCard(fb)) {
-//      debug("failed to save image to card");
-//    }
+// if(!save_image_to_sd_card(fb)) {
+//    debug("failed to save image to card");
 //  }
 
   // return the frame buffer back to the driver for reuse
@@ -546,5 +545,4 @@ void loop() {
 //  // while(SerialBT.available()){
 //  //SerialBT.write(file.read());
 //  delay(2000);
-//  
 //  //}

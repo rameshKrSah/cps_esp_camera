@@ -13,6 +13,9 @@
 #include <algorithm>
 #include <iterator>
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 typedef enum {
     BLUETOOTH_NONE = 0,
     BLUETOOTH_CONNECTING = 1,
@@ -20,13 +23,20 @@ typedef enum {
     BLUETOOTH_DISCONNECTED = 3
 }_bluetooth_status_;
 
+const uint8_t MAX_LENGTH = 330;
 
 class Bluetooth {
     private:
-    BluetoothSerial bt_serial;
-    String bt_device_name;
-    uint8_t bt_server_mac[6];
-    _bluetooth_status_ bt_connection_flag;
+    BluetoothSerial _bt_serial;
+    String _bt_device_name;
+    uint8_t _bt_server_mac[6];
+    _bluetooth_status_ _bt_connection_flag;
+    uint8_t _read_buffer[MAX_LENGTH];
+    uint8_t _receive_length;
+
+    xSemaphoreHandle _receive_data_Semaphore;
+    xSemaphoreHandle _receive_data_mutex;
+
     const char * _bluetooth_status_as_string(_bluetooth_status_ st);
 
     public:
@@ -87,6 +97,24 @@ class Bluetooth {
      * Set the Bluetooth connection flag.
      */
     void set_bt_connection_status(_bluetooth_status_ status);
+
+    /**
+     * Take the receive data semaphore.
+     */
+    bool take_rcv_data_semaphore();
+
+    /**
+     * Copy the data received from the Bluetooth in the receive buffer.
+     * @param: const uint8_t * buff
+     * @param: uint8_t len
+     */
+    void copy_received_data(const uint8_t * buff, uint8_t len);
+
+    /**
+     * Get the first byte from the receive buffer.
+     * @return uint8_t
+     */
+    uint8_t get_recv_buffer();
 };
 
 

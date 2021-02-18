@@ -12,6 +12,8 @@
 #include "Arduino.h"
 #include "soc/soc.h"           // Disable brownout problems
 #include "soc/rtc_cntl_reg.h"  // Disable brownout problems
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include "utils.h"
 #include "camera.h"
@@ -22,6 +24,12 @@
 
 Bluetooth my_bluetooth;
 uint8_t btServerAddress[6] = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E};
+
+
+/**
+ * A task that takes images and save them to SD card.
+ */
+
 
 // Setup Part
 void setup() {
@@ -64,9 +72,9 @@ void setup() {
 // Loop part of the code. 
 void loop() {
   // check whether the Bluetooth Connection is Intact or not.
- if(my_bluetooth.get_bt_connection_status() != BLUETOOTH_CONNECTED) {
+  if(my_bluetooth.get_bt_connection_status() != BLUETOOTH_CONNECTED) {
    my_bluetooth.bt_reconnect();
- }
+  }
   
 //   // strucutre that holds the camera data
 //   camera_fb_t * fb = NULL;
@@ -90,36 +98,9 @@ void loop() {
 //   // before going to sleep stop the bluetooth
 //   my_bluetooth.de_init_bluetooth();
 //   go_to_deep_sleep(TIME_TO_SLEEP);
+  
 }
 
-
-
-  
-//  file = fs.open(path);
-//  if(!file){
-//    Serial.println("Failed to open file for reading");
-//    return;
-//  }
-//  
-//  int jpglen = fb->len;
-//  while (jpglen > 0) {
-//    // read 32 bytes at a time;
-//    uint8_t *buffer;
-//    uint8_t bytesToRead = min(32, jpglen); // change 32 to 64 for a speedup but may not work with all setups!
-//    //      buffer = cam.readPicture(bytesToRead);
-//    file.write(buffer, bytesToRead);
-//    //file.write(fb->buf, fb->len);
-//    for(i=0; i<bytesToRead;i++)
-//    SerialBT.write(buffer[i]);
-//           
-//    jpglen -= bytesToRead;
-//    }
-//  
-//  //Serial.print("Read from file: ");
-//  // while(SerialBT.available()){
-//  //SerialBT.write(file.read());
-//  delay(2000);
-//  //}
 
 /*
  * Callback which receives the data from the input stream of Bluetooth
@@ -127,9 +108,8 @@ void loop() {
 void bt_data_received_callback(const uint8_t * buff, size_t len) {
     uint8_t totalBytes = int(len);
     if((buff != NULL) && (totalBytes > 0)){
-    // we got data on the input stream of Bluetooth
-    // do something with it. Don't process it here. Use Semaphore maybe
-    Serial.printf("got data on Bluetooth length: %d\n", totalBytes);
+      Serial.printf("got data on Bluetooth length: %d\n", totalBytes);
+      my_bluetooth.copy_received_data(buff, totalBytes);
     }
 }
 
@@ -272,3 +252,29 @@ const char * getSPP_StatusDes(esp_spp_status_t st) {
       return "invalid";
   }
 }
+
+//  file = fs.open(path);
+//  if(!file){
+//    Serial.println("Failed to open file for reading");
+//    return;
+//  }
+//  
+//  int jpglen = fb->len;
+//  while (jpglen > 0) {
+//    // read 32 bytes at a time;
+//    uint8_t *buffer;
+//    uint8_t bytesToRead = min(32, jpglen); // change 32 to 64 for a speedup but may not work with all setups!
+//    //      buffer = cam.readPicture(bytesToRead);
+//    file.write(buffer, bytesToRead);
+//    //file.write(fb->buf, fb->len);
+//    for(i=0; i<bytesToRead;i++)
+//    SerialBT.write(buffer[i]);
+//           
+//    jpglen -= bytesToRead;
+//    }
+//  
+//  //Serial.print("Read from file: ");
+//  // while(SerialBT.available()){
+//  //SerialBT.write(file.read());
+//  delay(2000);
+//  //}

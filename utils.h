@@ -2,14 +2,14 @@
 #define __UTILS_H__
 
 #include "Arduino.h"
-#include "WiFi.h" 
-#include "driver/adc.h"
-#include <esp_wifi.h>
-#include <esp_bt.h>
+// #include "WiFi.h" 
+// #include "driver/adc.h"
+// #include <esp_wifi.h>
+// #include <esp_bt.h>
 
 #define DEBUG true
 #define STATUS_OK 1
-#define STATUS_NOT_OK -1
+#define STATUS_NOT_OK 0
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 
 

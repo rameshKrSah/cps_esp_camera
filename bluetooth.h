@@ -13,14 +13,21 @@
 #include <algorithm>
 #include <iterator>
 
+typedef enum {
+    BLUETOOTH_NONE = 0,
+    BLUETOOTH_CONNECTING = 1,
+    BLUETOOTH_CONNECTED = 2,
+    BLUETOOTH_DISCONNECTED = 3
+}_bluetooth_status_;
+
+
 class Bluetooth {
     private:
     BluetoothSerial bt_serial;
     String bt_device_name;
     uint8_t bt_server_mac[6];
-    bool bt_connection_flag;
-    // void callbackBluetooth(esp_spp_cb_event_t event, esp_spp_cb_param_t *param);
-    // void bluetoothOnDataReceiveCallback(const uint8_t * buff, size_t len);
+    _bluetooth_status_ bt_connection_flag;
+    const char * _bluetooth_status_as_string(_bluetooth_status_ st);
 
     public:
     Bluetooth();
@@ -44,7 +51,7 @@ class Bluetooth {
     /**
      * Get the Bluetooth connection status.
      */
-    bool get_bt_connection_status();
+    _bluetooth_status_ get_bt_connection_status();
 
     /*
     * Send the data in the buffer to the output stream of Bluetooth
@@ -71,7 +78,6 @@ class Bluetooth {
      */
     void bt_reconnect();
 
-
     /**
     Reset the Bluetooth module.
     */
@@ -80,7 +86,7 @@ class Bluetooth {
     /**
      * Set the Bluetooth connection flag.
      */
-    void set_bt_connection_status(bool status);
+    void set_bt_connection_status(_bluetooth_status_ status);
 };
 
 

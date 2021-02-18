@@ -45,51 +45,51 @@ void setup() {
   my_bluetooth.set_status_callback(bt_status_callback);
   my_bluetooth.set_on_receive_data_callback(bt_data_received_callback);
   
-  // initialize the camera module
-   if (init_camera() != ESP_OK) {
-    debug("camera init failed");
-    return;
-  }
+  // // initialize the camera module
+  //  if (init_camera() != ESP_OK) {
+  //   debug("camera init failed");
+  //   return;
+  // }
   
-  // Turn off the on board LED
-  turn_off_camera_flash();
+  // // Turn off the on board LED
+  // turn_off_camera_flash();
 
-  // initialize the SD module
-  if(!init_sd_card()) {
-    debug("sd card init failed");
-    return; 
-  }
+  // // initialize the SD module
+  // if(!init_sd_card()) {
+  //   debug("sd card init failed");
+  //   return; 
+  // }
 }
 
 // Loop part of the code. 
 void loop() {
   // check whether the Bluetooth Connection is Intact or not.
-//  if(!my_bluetooth.get_bt_connection_status()) {
-//    my_bluetooth.bt_reconnect();
-//  }
+ if(my_bluetooth.get_bt_connection_status() != BLUETOOTH_CONNECTED) {
+   my_bluetooth.bt_reconnect();
+ }
   
-  // strucutre that holds the camera data
-  camera_fb_t * fb = NULL;
-  fb = take_picture();
+//   // strucutre that holds the camera data
+//   camera_fb_t * fb = NULL;
+//   fb = take_picture();
   
-  // send the read image to the Phone via Bluetooth
-  Serial.printf("camera buf len %d\n", fb->len);
-//  my_bluetooth.bt_write_data(fb->buf, fb->len);
+//   // send the read image to the Phone via Bluetooth
+//   Serial.printf("camera buf len %d\n", fb->len);
+// //  my_bluetooth.bt_write_data(fb->buf, fb->len);
   
-  // if we have a picture, try to store it in the SD card.
- if(!save_image_to_sd_card(fb)) {
-    debug("failed to save image to card");
-  }
+//   // if we have a picture, try to store it in the SD card.
+//  if(!save_image_to_sd_card(fb)) {
+//     debug("failed to save image to card");
+//   }
 
-  // return the frame buffer back to the driver for reuse
-  esp_camera_fb_return(fb);
+//   // return the frame buffer back to the driver for reuse
+//   esp_camera_fb_return(fb);
 
-  // Turn off the on board LED
-  turn_off_camera_flash();
+//   // Turn off the on board LED
+//   turn_off_camera_flash();
 
-  // before going to sleep stop the bluetooth
-  my_bluetooth.de_init_bluetooth();
-  go_to_deep_sleep(TIME_TO_SLEEP);
+//   // before going to sleep stop the bluetooth
+//   my_bluetooth.de_init_bluetooth();
+//   go_to_deep_sleep(TIME_TO_SLEEP);
 }
 
 
@@ -125,10 +125,11 @@ void loop() {
  * Callback which receives the data from the input stream of Bluetooth
  */
 void bt_data_received_callback(const uint8_t * buff, size_t len) {
-    int totalBytes = int(len);
-    if((buff != NULL) && (totalBytes>0)){
+    uint8_t totalBytes = int(len);
+    if((buff != NULL) && (totalBytes > 0)){
     // we got data on the input stream of Bluetooth
     // do something with it. Don't process it here. Use Semaphore maybe
+    Serial.printf("got data on Bluetooth length: %d\n", totalBytes);
     }
 }
 
@@ -142,12 +143,12 @@ void bt_status_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
   switch(event) {
     case ESP_SPP_OPEN_EVT:  // camera is connected to the phone
       debug("cb: camera connected to phone");
-      my_bluetooth.set_bt_connection_status(true);
+      my_bluetooth.set_bt_connection_status(BLUETOOTH_CONNECTED);
       break;
 
     case ESP_SPP_CLOSE_EVT: // camera is disconnected from the phone
       debug("cb: camera disconnected from phone");
-      my_bluetooth.set_bt_connection_status(false);
+      my_bluetooth.set_bt_connection_status(BLUETOOTH_DISCONNECTED);
 
     //   Serial.printf("cb: %d\n", param->close.async ? 1 : 0);
 
@@ -160,6 +161,7 @@ void bt_status_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
       
     case ESP_SPP_CL_INIT_EVT: // camera started the connection to the phone
       debug("cb: camera connecting to phone");
+      my_bluetooth.set_bt_connection_status(BLUETOOTH_CONNECTING);
       break;
       
     case ESP_SPP_SRV_OPEN_EVT: // camera as server has accepted an incoming connection

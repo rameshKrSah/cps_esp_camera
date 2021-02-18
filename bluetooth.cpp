@@ -14,6 +14,7 @@
  */
 Bluetooth::Bluetooth() {
     bt_device_name = "cameraModule";
+    bt_connection_flag = BLUETOOTH_NONE;
 }
 
 /**
@@ -22,7 +23,7 @@ Bluetooth::Bluetooth() {
 Bluetooth::~Bluetooth() {
     un_set_callbacks();
     bt_serial.end();
-    bt_connection_flag = false;
+    bt_connection_flag = BLUETOOTH_DISCONNECTED;
 }
 
 /**
@@ -31,7 +32,7 @@ Bluetooth::~Bluetooth() {
 void Bluetooth::de_init_bluetooth(){
     un_set_callbacks();
     bt_serial.end();
-    bt_connection_flag = false;
+    bt_connection_flag = BLUETOOTH_DISCONNECTED;
 }
 
 /**
@@ -47,7 +48,7 @@ bool Bluetooth::init_bluetooth(uint8_t mac[6]) {
 
     // initialize the Bluetooth and set the callback
     bt_serial.begin(bt_device_name, true);
-    bt_connection_flag = bt_serial.connect(mac);
+    bool status = bt_serial.connect(mac);
 
     // check if we are connected or not. if not try again.
 //    if(bt_connection_flag) {
@@ -107,14 +108,15 @@ String Bluetooth::get_bt_device_name() {
 /**
  * Get the Bluetooth connection state. 
  */
-bool Bluetooth::get_bt_connection_status() {
+_bluetooth_status_ Bluetooth::get_bt_connection_status() {
     return bt_connection_flag;
 }
 
 /**
  * Set the Bluetooth connection flag.
  */
-void Bluetooth::set_bt_connection_status(bool status) {
+void Bluetooth::set_bt_connection_status(_bluetooth_status_ status) {
+    Serial.printf("setting connection status %s\n", _bluetooth_status_as_string(status));
     bt_connection_flag = status;
 }
 
@@ -137,6 +139,29 @@ int Bluetooth::bt_write_data(const uint8_t * buff, int len) {
 void Bluetooth::bt_reconnect() {
     if (bt_serial.hasClient() == 0) {
         // camera is not connected to any device
-        bt_connection_flag = bt_serial.connect();   // the same MAC address is used for reconnection
+        bt_serial.connect();   // the same MAC address is used for reconnection
+    }
+}
+
+
+/**
+ * Get the Bluetooth connection status as string.
+ */
+const char * Bluetooth::_bluetooth_status_as_string(_bluetooth_status_ st) {
+    switch(st) {
+        case BLUETOOTH_NONE:
+            return "BLUETOOTH_NONE";
+        
+        case BLUETOOTH_CONNECTING: 
+            return "BLUETOOTH_CONNECTING";
+
+        case BLUETOOTH_CONNECTED:
+            return "BLUETOOTH_CONNECTED";
+
+        case BLUETOOTH_DISCONNECTED:
+            return "BLUETOOTH_DISCONNECTED";
+        
+        default:
+            return "UNKNOWN";
     }
 }

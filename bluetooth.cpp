@@ -47,19 +47,19 @@ bool Bluetooth::init_bluetooth(uint8_t mac[6]) {
 
     // initialize the Bluetooth and set the callback
     bt_serial.begin(bt_device_name, true);
-    bt_connection_flag = bt_serial.connect(bt_server_mac);
+    bt_connection_flag = bt_serial.connect(mac);
 
     // check if we are connected or not. if not try again.
-    if(bt_connection_flag && bt_serial.hasClient()) {
-        debug("bt connected to phone");
-        return true;
-    }else {
-        while(!bt_serial.connected(1000)) {
-            debug("camera failed to connect. make sure phone is available and in range"); 
-        }
-    }
-
-    return false;
+//    if(bt_connection_flag) {
+//        debug("bt connected to phone");
+//        return true;
+//    }else {
+//        while(!bt_serial.connected(1000)) {
+//            debug("camera failed to connect. make sure phone is available and in range"); 
+//        }
+//    }
+    
+    return true;
 }
 
 /**
@@ -140,5 +140,3 @@ void Bluetooth::bt_reconnect() {
         bt_connection_flag = bt_serial.connect();   // the same MAC address is used for reconnection
     }
 }
-
-

@@ -10,18 +10,16 @@
 // define the number of bytes you want to access
 #define EEPROM_SIZE 2
 
-
-
 /**
  * Initialize the SD card module.
  */
-boolean init_sd_card();
+bool init_sd_card();
 
 
 /*
  * Save the content of the camera buffer in the SD card.
  * @param: Pointer to camera buffer structure.
  */
-boolean save_image_to_sd_card(camera_fb_t * fb);
+bool save_image_to_sd_card(camera_fb_t * fb);
 
 #endif

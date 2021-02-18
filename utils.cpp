@@ -16,11 +16,11 @@ void debug(const char * message){
 void go_to_deep_sleep(long sleep_time_seconds) {
   debug("going to deep sleep");
 
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
+//  WiFi.disconnect();
+//  WiFi.mode(WIFI_OFF);
 
-  adc_power_off();
-  esp_wifi_stop();
+//  adc_power_off();
+//  esp_wifi_stop();
 
   // configure the timer to wake up
   esp_sleep_enable_timer_wakeup(sleep_time_seconds * uS_TO_S_FACTOR);

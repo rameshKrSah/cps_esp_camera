@@ -8,15 +8,10 @@
  * 5. Remain in the deep sleep mode unless work is to be done.
  * 6. Maintain a RTC for time keeping. Query time over internet maybe at each reset.
  */
-
-/*
- * First part of the project is to take images periodically (deep sleep maintained) 
- * and store them in SD card.
- */
-
+ 
 #include "Arduino.h"
-#include "soc/soc.h"           // Disable brownour problems
-#include "soc/rtc_cntl_reg.h"  // Disable brownour problems
+#include "soc/soc.h"           // Disable brownout problems
+#include "soc/rtc_cntl_reg.h"  // Disable brownout problems
 
 #include "utils.h"
 #include "camera.h"
@@ -25,26 +20,10 @@
 
 #define TIME_TO_SLEEP  10        /* Time ESP32 will go to sleep (in seconds) */
 
-// use this variable to create unique picture name while saving in SD card
-// RTC_DATA_ATTR int pictureNumberSaving = 0;
-
-// what are these for
-// File photoFile; 
-// int global_i;
-
-
-/*
- * TODO:
- * 1. we need to implement to check when the connection is established, 
- * 2. data is transmitted successfully
- * 3. do we have some data in the receive queue
- * 4. if connection is lost do we reconnect and finish the job
- * 5. .........
- */
-
 Bluetooth my_bluetooth;
-uint8_t btServerAddress[6]  = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E};
+uint8_t btServerAddress[6] = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E};
 
+// Setup Part
 void setup() {
   // Disable brownout detector
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
@@ -82,46 +61,31 @@ void setup() {
   }
 }
 
-
+// Loop part of the code. 
 void loop() {
   // check whether the Bluetooth Connection is Intact or not.
-  if(!my_bluetooth.get_bt_connection_status()) {
-    my_bluetooth.bt_reconnect();
-  }
+//  if(!my_bluetooth.get_bt_connection_status()) {
+//    my_bluetooth.bt_reconnect();
+//  }
   
   // strucutre that holds the camera data
-  camera_fb_t * fb = take_picture();
-  
-  // Turn off the on board LED
-  turn_off_camera_flash();
-
+  camera_fb_t * fb = NULL;
+  fb = take_picture();
   
   // send the read image to the Phone via Bluetooth
   Serial.printf("camera buf len %d\n", fb->len);
-  my_bluetooth.bt_write_data(fb->buf, fb->len);
-
+//  my_bluetooth.bt_write_data(fb->buf, fb->len);
   
-//  // if we have a picture, try to store it in the SD card.
-// if(!save_image_to_sd_card(fb)) {
-//    debug("failed to save image to card");
-//  }
+  // if we have a picture, try to store it in the SD card.
+ if(!save_image_to_sd_card(fb)) {
+    debug("failed to save image to card");
+  }
 
   // return the frame buffer back to the driver for reuse
   esp_camera_fb_return(fb);
 
-
-  // read the data from the SD card 
-
-  
-//  uint8_t dt[5] = {'h', 'e', 'l', 'l', 'o'};
-//  
-//  SerialBT.write(dt, 5);
-//  
-//  if (SerialBT.available()) {
-//    Serial.write(SerialBT.read());
-//  }
-
-  delay(10000);
+  // Turn off the on board LED
+  turn_off_camera_flash();
 
   // before going to sleep stop the bluetooth
   my_bluetooth.de_init_bluetooth();
@@ -167,7 +131,6 @@ void bt_data_received_callback(const uint8_t * buff, size_t len) {
     // do something with it. Don't process it here. Use Semaphore maybe
     }
 }
-
 
 /*
  * Callback function for the Bluetooth stack. We can monitor the Bluetooth status from 

@@ -8,7 +8,7 @@
 #include "esp_camera.h"
 
 // define the number of bytes you want to access
-#define EEPROM_SIZE 2
+#define EEPROM_SIZE 4
 
 /**
  * Initialize the SD card module.

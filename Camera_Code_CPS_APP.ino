@@ -24,11 +24,80 @@
 
 Bluetooth my_bluetooth;
 uint8_t btServerAddress[6] = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E};
+xSemaphoreHandle deep_sleep_semaphore;
+
+/**
+ * We will have two tasks. 
+ * 1. One task to take pictures and save the pictures to SD card. 
+ * 2. Second task to connect to phone via Bluetooth and transmit images in the SD card.
+ * 
+ * To schedule a task, we need a function that contains the code we want to run and then 
+ * create a task that calls this function. 
+ */
+
+/**
+ * Task to take pictures and save the pictures in the SD card
+ */
+void camera_task(void * params) {
+  debug("camera task started!");
+
+  // strucutre that holds the camera data
+  camera_fb_t * fb = NULL;
+  fb = take_picture();
+  Serial.printf("camera buf len %d\n", fb->len);
+  
+  // if we have a picture, try to store it in the SD card.
+  if(!save_image_to_sd_card(fb)) {
+    debug("failed to save image to card");
+  }
+
+  // return the frame buffer back to the driver for reuse
+  esp_camera_fb_return(fb);
+
+  // Turn off the on board LED
+  turn_off_camera_flash();
+
+  for(;;) {
+    debug("going to deep sleep from camera task");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    // wait for the semaphore for deep sleep
+    xSemaphoreTake(deep_sleep_semaphore, portMAX_DELAY);
+
+    // go to deep sleep
+    go_to_deep_sleep(TIME_TO_SLEEP);
+  }
+}
 
 
 /**
- * A task that takes images and save them to SD card.
+ * Task to connect to phone via Bluetooth and send pictures stored in the SD card.
  */
+void bluetooth_task(void * params) {
+  debug("bluetooth task started!");
+
+  for(;;) {
+    // check whether we have data in the SD card or not
+
+    // check whether we have connection or not
+    if(my_bluetooth.get_bt_connection_status() != BLUETOOTH_CONNECTED) {
+      my_bluetooth.bt_reconnect();
+    }
+
+    // send the data untill done or transmit fixed number of images.
+
+    // my_bluetooth.de_init_bluetooth();
+    
+    // give the Semaphore so that the camera can be put to sleep.
+
+    xSemaphoreGive(deep_sleep_semaphore);
+
+    // delete the task.
+    debug("deleting bluetooth task");
+    // vTaskDelay(10000 / portTICK_PERIOD_MS);
+    vTaskDelete(NULL);
+  }
+}
 
 
 // Setup Part
@@ -43,38 +112,46 @@ void setup() {
   debug("configuring services");
 
   // initialize the Bluetooth
-  if(!my_bluetooth.init_bluetooth(btServerAddress))
-  {
-    debug("bluetooth init failed");
+ if(!my_bluetooth.init_bluetooth(btServerAddress))
+ {
+   debug("bluetooth init failed");
+   return;
+ }
+
+ // register Bluetooth callbacks.
+ my_bluetooth.set_status_callback(bt_status_callback);
+ my_bluetooth.set_on_receive_data_callback(bt_data_received_callback);
+  
+  // initialize the camera module
+   if (init_camera() != ESP_OK) {
+    debug("camera init failed");
     return;
   }
-
-  // register Bluetooth callbacks.
-  my_bluetooth.set_status_callback(bt_status_callback);
-  my_bluetooth.set_on_receive_data_callback(bt_data_received_callback);
   
-  // // initialize the camera module
-  //  if (init_camera() != ESP_OK) {
-  //   debug("camera init failed");
-  //   return;
-  // }
-  
-  // // Turn off the on board LED
-  // turn_off_camera_flash();
+  // Turn off the on board LED
+  turn_off_camera_flash();
 
-  // // initialize the SD module
-  // if(!init_sd_card()) {
-  //   debug("sd card init failed");
-  //   return; 
-  // }
+  // initialize the SD module
+  if(!init_sd_card()) {
+    debug("sd card init failed");
+    return; 
+  }
+
+  // create the deep sleep semaphore
+  vSemaphoreCreateBinary(deep_sleep_semaphore);
+  // xSemaphoreGive(deep_sleep_semaphore);
+
+  // Schedule the tasks. 
+  xTaskCreate(camera_task, "take pictue and save to sd card", 5000, NULL, 1, NULL);
+  xTaskCreate(bluetooth_task, "connect to phone and send data", 5000, NULL, 1, NULL);
 }
 
 // Loop part of the code. 
 void loop() {
-  // check whether the Bluetooth Connection is Intact or not.
-  if(my_bluetooth.get_bt_connection_status() != BLUETOOTH_CONNECTED) {
-   my_bluetooth.bt_reconnect();
-  }
+  // // check whether the Bluetooth Connection is Intact or not.
+  // if(my_bluetooth.get_bt_connection_status() != BLUETOOTH_CONNECTED) {
+  //  my_bluetooth.bt_reconnect();
+  // }
   
 //   // strucutre that holds the camera data
 //   camera_fb_t * fb = NULL;
@@ -95,10 +172,9 @@ void loop() {
 //   // Turn off the on board LED
 //   turn_off_camera_flash();
 
-//   // before going to sleep stop the bluetooth
-//   my_bluetooth.de_init_bluetooth();
-//   go_to_deep_sleep(TIME_TO_SLEEP);
-  
+  // before going to sleep stop the bluetooth
+  // my_bluetooth.de_init_bluetooth();
+  // go_to_deep_sleep(TIME_TO_SLEEP);
 }
 
 
@@ -252,29 +328,3 @@ const char * getSPP_StatusDes(esp_spp_status_t st) {
       return "invalid";
   }
 }
-
-//  file = fs.open(path);
-//  if(!file){
-//    Serial.println("Failed to open file for reading");
-//    return;
-//  }
-//  
-//  int jpglen = fb->len;
-//  while (jpglen > 0) {
-//    // read 32 bytes at a time;
-//    uint8_t *buffer;
-//    uint8_t bytesToRead = min(32, jpglen); // change 32 to 64 for a speedup but may not work with all setups!
-//    //      buffer = cam.readPicture(bytesToRead);
-//    file.write(buffer, bytesToRead);
-//    //file.write(fb->buf, fb->len);
-//    for(i=0; i<bytesToRead;i++)
-//    SerialBT.write(buffer[i]);
-//           
-//    jpglen -= bytesToRead;
-//    }
-//  
-//  //Serial.print("Read from file: ");
-//  // while(SerialBT.available()){
-//  //SerialBT.write(file.read());
-//  delay(2000);
-//  //}

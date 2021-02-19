@@ -1,5 +1,5 @@
 {
     "board": "esp32:esp32:esp32cam",
     "sketch": "Camera_Code_CPS_APP.ino",
-    "port":"COM6"
+    "port": "COM6"
 }

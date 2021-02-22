@@ -33,7 +33,6 @@
  * Both phone and camera will wait for 5 seconds for response. 
  */
 
-
 #include "bluetooth_comm.h"
 #include "utils.h"
 
@@ -41,41 +40,60 @@
 BluetoothCommunication::BluetoothCommunication(){}
 BluetoothCommunication::~BluetoothCommunication(){}
 
-bool BluetoothCommunication::_send_data(Bluetooth my_bt, bluetooth_comm_data_type data_type, const uint8_t* data_ptr, uint8_t data_length) {
+
+/**
+ * Send the content of the file over Bluetooth. 
+ * @param: Bluetooth object
+ * @param: bluetooth_comm_data_type data type
+ * @param: FILE object
+ * 
+ * @return: boolean
+ */
+bool BluetoothCommunication::send_data_file(Bluetooth my_bt, bluetooth_comm_data_type data_type, File my_file) {
     bool status = false;
-    uint8_t tx_failed = 0;
     
-    // we can send all the data at once
-    _create_packet(data_ptr, data_length, data_type);
-
-    while(true){
-        // we have the data packet. send it over Bluetooth and wait for the response
-        if(my_bt.bt_write_data(_packet_buffer, _packet_length) == _packet_length) {
-            // data sent succesully, now handle the response.
-            if(_wait_for_response(my_bt, data_type)) {
-                status = true;
-                break;
-            }
-        } else {
-            debug("failed to send data over bluetooth");
-            tx_failed++;
-        }
-
-        // try 3 times
-        if(tx_failed == 3) {
-            break;
-        }
-        
+    if(my_file == NULL) {
+        return status;
     }
 
-    // if (_packet_ptr != NULL) {
-    //     // free the allocated memory
-    //     free(_packet_ptr);
+    // First we need to check if we have the connection
+    // if(my_bt.get_bt_connection_status() != BLUETOOTH_CONNECTED) {
+    //     debug("send_data::camera not connected to phone");
+    //     return status;
     // }
 
+    // data type byte (1), payload length byte (2), packet number (4), and end character (1)
+    uint16_t empty_packet_space = MAX_LENGTH - 8;
+
+    // set the packet number and allocate memory for the data packet (MAX_LENGTH) bytes
+    _packet_number = 1;
+
+    // _temp_buffer_buffer = (uint8_t *) malloc(empty_packet_space * sizeof(uint8_t));
+    uint16_t read_size = 0;
+
+    while(true){
+        // read bytes from the file
+        read_size = my_file.read(_packet_buffer + 7, empty_packet_space);
+        Serial.printf("size %d, position %d, packet number %d\n", my_file.size(), my_file.position(), _packet_number);
+        Serial.printf("read %d bytes from file\n", read_size);
+        // Serial.printf("%s\n", (char *)_packet_buffer);
+
+        // send the read bytes to phone
+        // status = _send_data(my_bt, data_type, NULL, read_size, false);
+        _packet_number += 1;
+        break;
+    }
+
+    // free the allocated memory
+    // if (_temp_buffer_buffer != NULL) {
+    //     debug("freeing the allocated memory");
+    //     // free the allocated memory
+    //     free(_temp_buffer_buffer);
+    // }
+
+    debug("returning from the send function");
     return status;
 }
-
 
 /**
  * Send the data over Bluetooth by creating a data packet and
@@ -84,11 +102,12 @@ bool BluetoothCommunication::_send_data(Bluetooth my_bt, bluetooth_comm_data_typ
  * @param Bluetooth object
  * @param bluetooth_comm_data_type data type enum
  * @param uint8_t * pointer to the data array
- * @param uint8_t data length
+ * @param uint32_t data length
  * 
  * @return boolean.
  */
-bool BluetoothCommunication::send_data(Bluetooth my_bt, bluetooth_comm_data_type data_type, const uint8_t* data_ptr, uint8_t data_length) {
+bool BluetoothCommunication::send_data(Bluetooth my_bt, bluetooth_comm_data_type data_type, 
+    const uint8_t* data_ptr, uint16_t data_length) {
     bool status = false;
     uint8_t total_data_length = data_length;
 
@@ -102,9 +121,9 @@ bool BluetoothCommunication::send_data(Bluetooth my_bt, bluetooth_comm_data_type
      * Since we can only send 330 bytes at a time and based on the data type we have filled or empty
      * 3rd byte position we need to calculate the number of free space available from the 330 bytes.
      */
-    uint8_t empty_packet_space = MAX_LENGTH - 3; // data type byte, payload length byte, and end character
+    uint8_t empty_packet_space = MAX_LENGTH - 4; // data type byte (1), payload length byte(2), and end character(1)
     if (data_type == IMAGE_DATA) {
-        empty_packet_space = empty_packet_space - 4; // if image data then packet sequence number byte also
+        empty_packet_space = empty_packet_space - 4; // if image data then packet sequence number (4 bytes) also
     }
 
     // set the packet number to zero
@@ -124,7 +143,7 @@ bool BluetoothCommunication::send_data(Bluetooth my_bt, bluetooth_comm_data_type
             sending_bytes = end-start;
             Serial.printf("start: %d, end: %d, # bytes %d\n", start, end, sending_bytes);
 
-            status = _send_data(my_bt, data_type, data_ptr+start, sending_bytes);
+            status = _send_data(my_bt, data_type, data_ptr+start, sending_bytes, true);
             if(status) {
                 data_length -= sending_bytes;
                 start += end;
@@ -134,14 +153,51 @@ bool BluetoothCommunication::send_data(Bluetooth my_bt, bluetooth_comm_data_type
                break;
             }
         }
-
     } else {
-        status = _send_data(my_bt, data_type, data_ptr, data_length);
+        status = _send_data(my_bt, data_type, data_ptr, data_length, true);
     }
 
     return status;
 }
 
+/**
+ * Send data and try 3 times if not succesully.
+ */
+bool BluetoothCommunication::_send_data(Bluetooth my_bt, bluetooth_comm_data_type data_type, 
+    const uint8_t * data_ptr, uint16_t data_length, bool response) {
+    bool status = false;
+    uint8_t tx_failed = 0;
+    
+    // we can send all the data at once
+    _create_packet(data_ptr, data_length, data_type);
+    // return false;
+
+    while(true){
+        // we have the data packet. send it over Bluetooth and wait for the response
+        if(my_bt.bt_write_data(_packet_buffer, _packet_length) == _packet_length) {
+            debug("data sent succesully");
+            status = true;
+
+            // Do we wait for the response?
+            if(response) {
+                debug("waiting for the response");
+                status = _wait_for_response(my_bt, data_type);
+            }
+            break;
+        } else {
+            debug("failed to send data over bluetooth");
+            tx_failed++;
+        }
+
+        // try 3 times
+        if(tx_failed == 3) {
+            break;
+        }
+        
+    }
+
+    return status;
+}
 
 /**
  * Wait for the response from the phone on Bluetooth and verfies the response.
@@ -151,16 +207,17 @@ bool BluetoothCommunication::send_data(Bluetooth my_bt, bluetooth_comm_data_type
 bool BluetoothCommunication::_wait_for_response(Bluetooth my_bt, bluetooth_comm_data_type data_type) {
     // wait for the Semaphore for 50 ticks 
     if(my_bt.take_rcv_data_semaphore()) {
+        debug("response received from phone");
         // if we reach here, then we have received response and it is in the receive buffer.
         if(my_bt.get_recv_buffer() == data_type){
             // data was sent succesully
+            debug("data type matched!!");
             return true;
         }
     }
 
     // data transmission Failed
     return false;
-
 }
 
 /**
@@ -170,38 +227,30 @@ bool BluetoothCommunication::_wait_for_response(Bluetooth my_bt, bluetooth_comm_
  * @param: uint8_t * pointer to payload
  * @param: uint8_t payload_len
  */
-void BluetoothCommunication::_create_packet(const uint8_t * payload, uint8_t payload_len, bluetooth_comm_data_type data_type){
-    // allocate memory for the packet_ptr to fit the payload
-    uint8_t space_needed = payload_len + 3;
+void BluetoothCommunication::_create_packet(const uint8_t * payload, uint16_t payload_len, 
+    bluetooth_comm_data_type data_type){
 
-    if(data_type == IMAGE_DATA) {
-        space_needed += 1;
-    }
-
-    // _packet_ptr = (uint8_t *) malloc(space_needed * sizeof(uint8_t));
     _packet_length = 0;
+    uint8_t * packet_bf_ptr = _packet_buffer;
 
     // set the data type
-    *(_packet_buffer + _packet_length) = data_type;
-    _packet_length++;
+    *(packet_bf_ptr + _packet_length) = data_type;
+    _packet_length += 1;
 
     // set the payload length
     *(_packet_buffer + _packet_length) = payload_len;
-    _packet_length++;
+    _packet_length += 2;
 
-    if(data_type == IMAGE_DATA) {
-        // if data_type is image, then we have the packet number as well
-        // packet_number is set by the calling function and is member of the class
-        *(_packet_buffer + _packet_length) = _packet_number;
-        _packet_length++;
-    }
-
+    // packet_number is set by the calling function and is member of the class
+    *(_packet_buffer + _packet_length) = _packet_number;
+    _packet_length += 4;
+    
     // now copy the payload 
-    memcpy(_packet_buffer+_packet_length, payload, payload_len);
+    // memcpy(_packet_buffer+_packet_length, payload, payload_len);
     _packet_length += payload_len;
 
     // finally copy the ending character
-    *(_packet_buffer + _packet_length) = END_CHARACTER;
+    *(_packet_buffer + _packet_length) = (uint8_t)END_CHARACTER;
     _packet_length += 1;
 
     // with this we have the packet, return back to the calling function.

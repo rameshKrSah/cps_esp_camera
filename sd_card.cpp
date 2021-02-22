@@ -94,3 +94,163 @@ bool save_image_to_sd_card(camera_fb_t * fb) {
     file.close();
     return true;
 }
+
+
+/**
+ * List the files and directory of the SD Card.
+ * @param: FS object
+ * @param: directory name (const char *)
+ * @param: levels (uint8_t)
+ * reference: https://github.com/espressif/arduino-esp32/blob/master/libraries/SD_MMC/examples/SDMMC_Test/SDMMC_Test.ino
+ */
+void sd_list_dir(fs::FS &fs, const char * dirname, uint8_t levels){
+    Serial.printf("Listing directory: %s\n", dirname);
+
+    File root = fs.open(dirname);
+    if(!root){
+        Serial.println("Failed to open directory");
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.println("Not a directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while(file){
+        if(file.isDirectory()){
+            Serial.print("  DIR : ");
+            Serial.println(file.name());
+            if(levels){
+                sd_list_dir(fs, file.name(), levels -1);
+            }
+        } else {
+            Serial.print("  FILE: ");
+            Serial.print(file.name());
+            Serial.print("  SIZE: ");
+            Serial.println(file.size());
+        }
+        file = root.openNextFile();
+    }
+}
+
+
+/**
+ * Get the next file in the directory.
+ * @param: FS object
+ * @param: directory name (const char *)
+ * @param: pointer to the FS:File 
+ * @return boolean
+ */
+bool sd_get_next_file(fs::FS &fs, const char * dirname, File * my_file){
+  File root = fs.open(dirname);
+
+  if(!root){
+    Serial.println("Failed to open directory");
+    return false;
+  }
+
+  if(!root.isDirectory()){
+    Serial.printf("%s is not a directory\n", dirname);
+    return false;
+  }
+
+  Serial.printf("root address 0x%x, root value 0x%x\n", &root, root);
+
+  // open the next file in the directory
+  File file = root.openNextFile();
+  while(file){
+    if(!file.isDirectory()){
+      Serial.print("  FILE: ");
+      Serial.print(file.name());
+      Serial.print("  SIZE: ");
+      Serial.println(file.size());
+      Serial.printf("current file address 0x%x, current file value 0x%x\n", &file, file);
+      *my_file = file;
+      root.close();
+      return true;
+    }
+    file = root.openNextFile();
+  }
+}
+
+
+/**
+ * Read file from SD card and echo it to Serial monitor.
+ * @param: FS
+ * @param: file path (const char *)
+ */
+void sd_read_file(fs::FS &fs, const char * path){
+    Serial.printf("Reading file: %s\n", path);
+
+    File file = fs.open(path);
+    if(!file){
+        Serial.println("Failed to open file for reading");
+        return;
+    }
+
+    Serial.print("Read from file: ");
+    while(file.available()){
+        Serial.write(file.read());
+    }
+}
+
+/**
+ * Delete a file from the SD card.
+ * @param: FS object
+ * @param: file path (const char *)
+ */
+void sd_delete_file(fs::FS &fs, const char * path){
+    Serial.printf("Deleting file: %s\n", path);
+    if(fs.remove(path)){
+        Serial.println("File deleted");
+    } else {
+        Serial.println("Delete failed");
+    }
+}
+
+
+/**
+ * Get the used space of the sd card.
+ * @return: uint32_t
+ */
+uint32_t get_sd_used_space(){
+  return  SD_MMC.usedBytes() / (1024 * 1024);
+}
+
+/**
+ * Print the used space of the SD card.
+ */
+void sd_used_space(){
+  Serial.printf("Used space: %lluMB\n", get_sd_used_space());
+}
+
+/**
+ * Get total space of the sd card. 
+ * @return uint32_t
+ */
+uint32_t get_sd_total_space(){
+  return SD_MMC.totalBytes() / (1024 * 1024);
+}
+
+/** 
+ * Print the total space of the SD Card. 
+ */
+void sd_total_space(){
+  Serial.printf("Total space: %lluMB\n", get_sd_total_space());
+}
+
+/**
+ * Get free space of the sd card. 
+ * @return uint32_t
+ */
+uint32_t get_sd_free_space(){
+  return get_sd_total_space() - get_sd_used_space();
+}
+
+/**
+ * Print the free space of the SD card.
+ */
+void sd_free_space(){
+  Serial.printf("Free space: %lluMB\n", get_sd_free_space());
+}

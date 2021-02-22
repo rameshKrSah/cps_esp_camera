@@ -23,7 +23,7 @@ typedef enum {
     BLUETOOTH_DISCONNECTED = 3
 }_bluetooth_status_;
 
-const uint8_t MAX_LENGTH = 330;
+const uint32_t MAX_LENGTH = 330;
 
 class Bluetooth {
     private:

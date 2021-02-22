@@ -14,15 +14,18 @@
 #include "soc/rtc_cntl_reg.h"  // Disable brownout problems
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "FS.h"
 
 #include "utils.h"
 #include "camera.h"
 #include "sd_card.h"
 #include "bluetooth.h"
+#include"bluetooth_comm.h"
 
 #define TIME_TO_SLEEP  10        /* Time ESP32 will go to sleep (in seconds) */
 
 Bluetooth my_bluetooth;
+BluetoothCommunication my_bluetooth_comm;
 uint8_t btServerAddress[6] = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E};
 xSemaphoreHandle deep_sleep_semaphore;
 
@@ -84,21 +87,25 @@ void bluetooth_task(void * params) {
       my_bluetooth.bt_reconnect();
     }
 
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
     // send the data untill done or transmit fixed number of images.
+    File my_file;
+    if(sd_get_next_file(SD_MMC, "/", &my_file)){
+      my_bluetooth_comm.send_data_file(my_bluetooth, IMAGE_DATA, my_file);
+    }
 
-    // my_bluetooth.de_init_bluetooth();
-    
     // give the Semaphore so that the camera can be put to sleep.
-
     xSemaphoreGive(deep_sleep_semaphore);
 
     // delete the task.
     debug("deleting bluetooth task");
-    // vTaskDelay(10000 / portTICK_PERIOD_MS);
     vTaskDelete(NULL);
   }
 }
 
+File my_file;
+File root;
 
 // Setup Part
 void setup() {
@@ -137,17 +144,66 @@ void setup() {
     return; 
   }
 
+  // sd_total_space();
+  // sd_used_space();
+  // sd_free_space();
+  // sd_list_dir(SD_MMC, "/", 0);
+
   // create the deep sleep semaphore
-  vSemaphoreCreateBinary(deep_sleep_semaphore);
+  // vSemaphoreCreateBinary(deep_sleep_semaphore);
   // xSemaphoreGive(deep_sleep_semaphore);
 
   // Schedule the tasks. 
-  xTaskCreate(camera_task, "take pictue and save to sd card", 5000, NULL, 1, NULL);
-  xTaskCreate(bluetooth_task, "connect to phone and send data", 5000, NULL, 1, NULL);
+  // xTaskCreate(camera_task, "take pictue and save to sd card", 5000, NULL, 1, NULL);
+  // xTaskCreate(bluetooth_task, "connect to phone and send data", 5000, NULL, 1, NULL);
+
+  root = SD_MMC.open("/");
+  Serial.printf("root address 0x%x, root value 0x%x\n", &root, root);
 }
+
 
 // Loop part of the code. 
 void loop() {
+
+  // CORRUPT HEAP: Bad head at 0x3ffba4ec. Expected 0xabba1234 got 0x6974616d
+
+  // open the next file in the directory
+  my_file = root.openNextFile();
+  while(my_file){
+    if(!my_file.isDirectory()){
+      Serial.print("  FILE: ");
+      Serial.print(my_file.name());
+      Serial.print("  SIZE: ");
+      Serial.println(my_file.size());
+      break;
+    }
+    my_file = root.openNextFile();
+  }
+
+  // uint8_t buffer[10];
+  // uint32_t read_size = my_file.read(buffer, 10);
+
+  debug("waiting.....");
+  delay(1000);
+
+  my_bluetooth_comm.send_data_file(my_bluetooth, IMAGE_DATA, my_file);
+
+  debug("waiting.....");
+  delay(1000);
+  
+  // debug("getting the file");
+  // Serial.printf("my file address 0x%x, my file value 0x%x\n", &my_file, my_file);
+
+  // if(sd_get_next_file(SD_MMC, "/", &my_file)){
+  //   Serial.printf("my file address 0x%x, my file value 0x%x\n", &my_file, my_file);
+  //   my_bluetooth_comm.send_data(my_bluetooth, IMAGE_DATA, &my_file);
+  // }
+
+  my_file.close();
+  Serial.printf("my file address 0x%x, my file value 0x%x\n", &my_file, my_file);
+
+  delay(2000);
+
   // // check whether the Bluetooth Connection is Intact or not.
   // if(my_bluetooth.get_bt_connection_status() != BLUETOOTH_CONNECTED) {
   //  my_bluetooth.bt_reconnect();

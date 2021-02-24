@@ -1,7 +1,6 @@
 #include "bluetooth.h"
 #include "utils.h"
 
-
 // const String btDeviceName = "cameraModule"; 
 // String MACadd = "C4:50:06:83:F4:7E";
 // uint8_t btServerAddress[6]  = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E};
@@ -34,7 +33,7 @@ Bluetooth::~Bluetooth() {
     _bt_connection_flag = BLUETOOTH_DISCONNECTED;
     vSemaphoreDelete(_receive_data_Semaphore);
     _receive_data_Semaphore = NULL;
-    
+
     vSemaphoreDelete(_receive_data_mutex);
     _receive_data_mutex = NULL;
 }

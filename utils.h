@@ -6,6 +6,8 @@
 // #include "driver/adc.h"
 // #include <esp_wifi.h>
 // #include <esp_bt.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #define DEBUG true
 #define STATUS_OK 1
@@ -23,5 +25,10 @@ void debug(const char * message);
  * Put's the ESP32 to deep sleep.
  */
 void go_to_deep_sleep(long sleep_time_seconds);
+
+/**
+ * Delay function, takes milliseconds argument for delay and calss VTaskDelay
+ */
+void delay_ms(uint32_t ms);
 
 #endif

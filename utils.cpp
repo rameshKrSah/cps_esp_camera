@@ -28,3 +28,10 @@ void go_to_deep_sleep(long sleep_time_seconds) {
   // go to sleep 
   esp_deep_sleep_start();
 }
+
+/**
+ * Delay function, takes milliseconds argument for delay and calss VTaskDelay
+ */
+void delay_ms(uint32_t ms){
+  vTaskDelay(ms / portTICK_PERIOD_MS); 
+}

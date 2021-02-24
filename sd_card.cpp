@@ -146,16 +146,16 @@ bool sd_get_next_file(fs::FS &fs, const char * dirname, File * my_file){
   File root = fs.open(dirname);
 
   if(!root){
-    Serial.println("Failed to open directory");
+   debug("sd_get_next_file:Failed to open directory");
     return false;
   }
 
   if(!root.isDirectory()){
-    Serial.printf("%s is not a directory\n", dirname);
+    Serial.printf("sd_get_next_file:%s is not a directory\n", dirname);
     return false;
   }
 
-  Serial.printf("root address 0x%x, root value 0x%x\n", &root, root);
+  // Serial.printf("root address 0x%x, root value 0x%x\n", &root, root);
 
   // open the next file in the directory
   File file = root.openNextFile();
@@ -165,9 +165,9 @@ bool sd_get_next_file(fs::FS &fs, const char * dirname, File * my_file){
       Serial.print(file.name());
       Serial.print("  SIZE: ");
       Serial.println(file.size());
-      Serial.printf("current file address 0x%x, current file value 0x%x\n", &file, file);
+      Serial.printf("sd_get_next_file:current file address 0x%x, current file value 0x%x\n", &file, file);
       *my_file = file;
-      root.close();
+      // root.close();
       return true;
     }
     file = root.openNextFile();

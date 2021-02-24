@@ -35,8 +35,8 @@ class Bluetooth {
     uint8_t _read_buffer[MAX_LENGTH];
     uint8_t _receive_length;
 
-    SemaphoreHandle_t _receive_data_Semaphore;
-    SemaphoreHandle_t _receive_data_mutex;
+    SemaphoreHandle_t _receive_data_Semaphore = NULL;
+    SemaphoreHandle_t _receive_data_mutex = NULL;
 
     const char * _bluetooth_status_as_string(_bluetooth_status_ st);
 

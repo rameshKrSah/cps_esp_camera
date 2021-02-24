@@ -90,8 +90,9 @@ class BluetoothCommunication {
      * Send next image from the SD card to phone.
      * 
      * @param: Bluetooth object pointer
+     * @param: FS object
      */
-    bool send_next_image(Bluetooth * my_bt);
+    bool send_next_image(Bluetooth * my_bt, fs::FS &fs);
 
     /**
      * Give semaphore which indicates that queued data is transmitted. 

@@ -21,7 +21,9 @@ Bluetooth::Bluetooth() {
         xSemaphoreTake(_receive_data_Semaphore, 0);
     }
 
-    _receive_data_mutex = xSemaphoreCreateMutex();
+    if(_receive_data_mutex == NULL){
+        _receive_data_mutex = xSemaphoreCreateMutex();
+    }
 }
 
 /**

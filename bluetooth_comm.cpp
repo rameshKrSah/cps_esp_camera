@@ -60,21 +60,20 @@ BluetoothCommunication::~BluetoothCommunication(){}
  * Send next image from the SD card to phone.
  * 
  * @param: Bluetooth object pointer
+ * @param: FS object
  */
-bool BluetoothCommunication::send_next_image(Bluetooth * my_bt){
+bool BluetoothCommunication::send_next_image(Bluetooth * my_bt, fs::FS &fs){
     bool status = false;
 
-    // open the root directory
-    File root = SD_MMC.open("/");
-
+    File root_dir = fs.open("/");
     // check whether root is open and a directory
-    if(root == NULL || !root.isDirectory()) { 
+    if(root_dir == NULL || !root_dir.isDirectory()) { 
         debug("send_next_image:failed to open the SD card!!");    
         return status;
     }
 
     // open the next file in the directory
-    File my_file = root.openNextFile();
+    File my_file = root_dir.openNextFile();
     while(my_file){
         if(!my_file.isDirectory()){
             debug("send_next_image:  FILE: ");
@@ -83,33 +82,15 @@ bool BluetoothCommunication::send_next_image(Bluetooth * my_bt){
             Serial.println(my_file.size());
             break;
         }
-        my_file = root.openNextFile();
+        my_file = root_dir.openNextFile();
     }
 
     // send the file 
     status = send_data_file(my_bt, IMAGE_DATA, &my_file);
 
-    // set the packet number and allocate memory for the data packet (MAX_LENGTH) bytes
-    // _packet_number = 1;
-
-    // uint16_t read_size = 0;
-
-    // while(my_file.available()){
-    //     // read bytes from the file
-    //     read_size = my_file.read(_packet_buffer + _PREAMBLE_SIZE, _PAYLOAD_SPACE);
-    //     Serial.printf("size %d, position %d, packet number %d\n", my_file.size(), my_file.position(), _packet_number);
-    //     Serial.printf("read %d bytes from file\n", read_size);
-
-    //     // send the read bytes to phone
-    //     _send_data(my_bt, IMAGE_DATA, NULL, read_size, false);
-    //     _packet_number += 1;
-    //     break;
-    // }
-
-    // close the file and root
+    // close the file
     my_file.close();
-    root.close();
-
+    root_dir.close();
 
     // after the file is sent, delete it from SD card.
 

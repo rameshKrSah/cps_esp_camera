@@ -15,12 +15,12 @@
  */
 bool init_sd_card();
 
-
-/*
+/**
  * Save the content of the camera buffer in the SD card.
+ * @param: FS object
  * @param: Pointer to camera buffer structure.
  */
-bool save_image_to_sd_card(camera_fb_t * fb);
+bool save_image_to_sd_card(fs::FS &fs, camera_fb_t * fb);
 
 /**
  * List the files and directory of the SD Card.
@@ -48,9 +48,9 @@ void sd_delete_file(fs::FS &fs, const char * path);
 
 /**
  * Get the used space of the sd card.
- * @return: uint32_t
+ * @return: uint64_t
  */
-uint32_t get_sd_used_space();
+uint64_t get_sd_used_space();
 
 /**
  * Print the used space of the SD card.
@@ -59,9 +59,9 @@ void sd_used_space();
 
 /**
  * Get total space of the sd card. 
- * @return uint32_t
+ * @return uint64_t
  */
-uint32_t get_sd_total_space();
+uint64_t get_sd_total_space();
 
 /** 
  * Print the total space of the SD Card. 
@@ -70,9 +70,9 @@ void sd_total_space();
 
 /**
  * Get free space of the sd card. 
- * @return uint32_t
+ * @return uint64_t
  */
-uint32_t get_sd_free_space();
+uint64_t get_sd_free_space();
 
 /**
  * Print the free space of the SD card.
@@ -87,5 +87,15 @@ void sd_free_space();
  * @return boolean
  */
 bool sd_get_next_file(fs::FS &fs, const char * dirname, File * my_file);
+
+/**
+ * Get SD_MMC and lock the mutex.
+ */
+void acquire_sd_mmc();
+
+/**
+ * Release the SD_MMC mutex.
+ */
+void release_sd_mmc();
 
 #endif

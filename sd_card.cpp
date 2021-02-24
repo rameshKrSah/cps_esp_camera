@@ -1,5 +1,7 @@
 #include "sd_card.h"
 #include "utils.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 // Data stored in RTC memory is not erased during deep sleep and only presit until reset.
 // Hence it it better to use EEPROM or flash memory to store the data.
@@ -12,26 +14,51 @@
 //// use this variable to keep track of picture(s) that has been sent to phone
 //RTC_DATA_ATTR uint8_t pictureNumberTransmitted = 0;
 
+static SemaphoreHandle_t _sd_mmc_mutex = NULL;
 
 /**
  * Initialize the SD card module.
  */
 bool init_sd_card() {
  // start SD card and verify for the card.
-  debug("starting SD card");
+  debug("init_sd_card:starting SD card");
   if(!SD_MMC.begin()){
-    debug("sd card mount failed");
+    debug("init_sd_card:sd card mount failed");
     return false;
   }
   
   uint8_t cardType = SD_MMC.cardType();
   if(cardType == CARD_NONE){
-    debug("no sd card attached");
+    debug("init_sd_card:no sd card attached");
     return false;
   }
+
+  sd_total_space();
+  sd_used_space();
+  sd_free_space();
   
+  // create the MUTEX for SD_MMC access. Errors when two processes uses SD_MMC at once.
+  if(_sd_mmc_mutex == NULL){
+    _sd_mmc_mutex = xSemaphoreCreateMutex();
+    xSemaphoreGive(_sd_mmc_mutex);
+  }
   return true;
 }
+
+/**
+ * Get SD_MMC and lock the mutex.
+ */
+void acquire_sd_mmc() {
+  xSemaphoreTake(_sd_mmc_mutex, portMAX_DELAY);
+}
+
+/**
+ * Release the SD_MMC mutex.
+ */
+void release_sd_mmc() {
+  xSemaphoreGive(_sd_mmc_mutex);
+}
+
 
 uint32_t get_4_bytes_eeprom(uint8_t start_address) {
   uint32_t tp = 0;
@@ -51,48 +78,49 @@ void set_4_bytes_eeprom(uint8_t start_address, uint32_t value) {
   EEPROM.commit();
 }
 
-/*
+/**
  * Save the content of the camera buffer in the SD card.
+ * @param: FS object
  * @param: Pointer to camera buffer structure.
  */
-bool save_image_to_sd_card(camera_fb_t * fb) {
-    if (fb == NULL) {
-        return false;
-    }
-    
-    uint32_t picture_number;
-        
-    // get the last picture number from EEPROM, and increment it for the new picture
-    EEPROM.begin(EEPROM_SIZE);
-    EEPROM.get(0, picture_number);
-    picture_number += 1;
-    
-    // Path where new picture will be saved in SD Card
-    String path = "/picture" + String(picture_number) +".jpg";
-    debug("new picture file name: ");
-    debug(path.c_str());
+bool save_image_to_sd_card(fs::FS &fs, camera_fb_t * fb) {
+  if (fb == NULL) {
+    debug("save_image_to_sd_card: null image buffer");
+    return false;
+  }
 
-    // get the file object to write the image data to SD card
-    fs::FS &fs = SD_MMC; 
-    File file = fs.open(path.c_str(), FILE_WRITE);
-    
-    if(!file){
-      debug("failed to open file in writing mode");
-      return false;
-    }
-    else {
-      file.write(fb->buf, fb->len); // payload (image), payload length
-      debug("saved image to path: ");
-      debug(path.c_str());
+  // we need timestamp as the file name for the image.
+  uint32_t picture_number;
+      
+  // get the last picture number from EEPROM, and increment it for the new picture
+  // EEPROM has limit on the number of writes at each location.
+  EEPROM.begin(EEPROM_SIZE);
+  EEPROM.get(0, picture_number);
+  picture_number += 1;
+  
+  // Path where new picture will be saved in SD Card
+  String path = "/picture" + String(picture_number) +".jpg";
+  debug("save_image_to_sd_card: new picture file name: ");
+  debug(path.c_str());
 
-      // save the updated picture number into EEPROM
-      EEPROM.put(0, picture_number);
-      EEPROM.commit();
-    }
+  // get the file object to write the image data to SD card 
+  File file = fs.open(path.c_str(), FILE_WRITE);
+  
+  if(!file){
+    debug("save_image_to_sd_card:failed to open file in writing mode");
+    return false;
+  }
+  else {
+    file.write(fb->buf, fb->len); // payload (image), payload length
 
-    // close the file
-    file.close();
-    return true;
+    // save the updated picture number into EEPROM
+    EEPROM.put(0, picture_number);
+    EEPROM.commit();
+  }
+
+  // close the file
+  file.close();
+  return true;
 }
 
 
@@ -139,7 +167,7 @@ void sd_list_dir(fs::FS &fs, const char * dirname, uint8_t levels){
  * Get the next file in the directory.
  * @param: FS object
  * @param: directory name (const char *)
- * @param: pointer to the FS:File 
+ * @param: pointer to the FS File 
  * @return boolean
  */
 bool sd_get_next_file(fs::FS &fs, const char * dirname, File * my_file){
@@ -154,8 +182,6 @@ bool sd_get_next_file(fs::FS &fs, const char * dirname, File * my_file){
     Serial.printf("sd_get_next_file:%s is not a directory\n", dirname);
     return false;
   }
-
-  // Serial.printf("root address 0x%x, root value 0x%x\n", &root, root);
 
   // open the next file in the directory
   File file = root.openNextFile();
@@ -212,9 +238,9 @@ void sd_delete_file(fs::FS &fs, const char * path){
 
 /**
  * Get the used space of the sd card.
- * @return: uint32_t
+ * @return: uint64_t
  */
-uint32_t get_sd_used_space(){
+uint64_t get_sd_used_space(){
   return  SD_MMC.usedBytes() / (1024 * 1024);
 }
 
@@ -222,14 +248,14 @@ uint32_t get_sd_used_space(){
  * Print the used space of the SD card.
  */
 void sd_used_space(){
-  Serial.printf("Used space: %lluMB\n", get_sd_used_space());
+  Serial.printf("SD used space: %lluMB\n", get_sd_used_space());
 }
 
 /**
  * Get total space of the sd card. 
- * @return uint32_t
+ * @return uint64_t
  */
-uint32_t get_sd_total_space(){
+uint64_t get_sd_total_space(){
   return SD_MMC.totalBytes() / (1024 * 1024);
 }
 
@@ -237,14 +263,14 @@ uint32_t get_sd_total_space(){
  * Print the total space of the SD Card. 
  */
 void sd_total_space(){
-  Serial.printf("Total space: %lluMB\n", get_sd_total_space());
+  Serial.printf("SD total space: %lluMB\n", get_sd_total_space());
 }
 
 /**
  * Get free space of the sd card. 
- * @return uint32_t
+ * @return uint64_t
  */
-uint32_t get_sd_free_space(){
+uint64_t get_sd_free_space(){
   return get_sd_total_space() - get_sd_used_space();
 }
 
@@ -252,5 +278,5 @@ uint32_t get_sd_free_space(){
  * Print the free space of the SD card.
  */
 void sd_free_space(){
-  Serial.printf("Free space: %lluMB\n", get_sd_free_space());
+  Serial.printf("SD free space: %lluMB\n", get_sd_free_space());
 }

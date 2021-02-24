@@ -11,18 +11,22 @@ typedef enum {
 }bluetooth_comm_data_type;
 
 
-class BluetoothCommunication{
+class BluetoothCommunication {
     private:
+    SemaphoreHandle_t _data_written_semaphore = NULL;
     static const uint8_t END_CHARACTER = '#';
+
+    // data type byte (1), payload length byte (2), packet number (2), and end character (1)
+    static const uint16_t _PAYLOAD_SPACE = MAX_LENGTH - 6;
+    static const uint8_t _PREAMBLE_SIZE = 5;
 
     static const uint8_t IMAGE_TYPE_IDENTIFIER = 0xA0;
     static const uint8_t GENERAL_TYPE_IDENTIFIER = 0xB0;
 
-    uint8_t _packet_buffer[MAX_LENGTH + 1];
-    uint32_t _packet_number = 0;
+    uint16_t _packet_number = 0;
     uint16_t _packet_length = 0;
-
     uint8_t * _temp_buffer_buffer = NULL;
+    uint8_t _packet_buffer[MAX_LENGTH + 1];
 
 
     /**
@@ -30,7 +34,7 @@ class BluetoothCommunication{
      * 
      * @param: bluetooth_comm_data_type
      * @param: uint8_t * pointer to payload
-     * @param: uint8_t payload_len
+     * @param: uint16_t payload_len
      */
     void _create_packet(const uint8_t * payload, uint16_t payload_len, bluetooth_comm_data_type data_type);
 
@@ -40,12 +44,22 @@ class BluetoothCommunication{
      * @param: Bluetooth my_bt
      * @return: boolean
      */
-    bool _wait_for_response(Bluetooth my_bt, bluetooth_comm_data_type data_type);
+    bool _wait_for_response(Bluetooth * my_bt, bluetooth_comm_data_type data_type);
 
-    bool _send_data(Bluetooth my_bt, bluetooth_comm_data_type data_type, const uint8_t* data_ptr, 
+    /**
+     * Send data over Bluetooth. All other send functions calls this function to send data. 
+     * 
+     * @param: Bluetooth object pointer (must use pointer otherwise the )
+     * @param: Data type
+     * @param: uint8_t * pointer to payload
+     * @param: uint16_t payload length
+     * @param: bool whether to wait for response or not.
+     */
+    bool _send_data(Bluetooth * my_bt, bluetooth_comm_data_type data_type, const uint8_t * data_ptr, 
         uint16_t data_length, bool response);
 
     public:
+
     BluetoothCommunication();
     ~BluetoothCommunication();
 
@@ -53,26 +67,36 @@ class BluetoothCommunication{
      * Send the data over Bluetooth by creating a data packet and
      * receive the response.
      * 
-     * @param Bluetooth object
+     * @param Bluetooth object pointer
      * @param bluetooth_comm_data_type data type enum
      * @param uint8_t * pointer to the data array
-     * @param uint32_t data length
+     * @param uint16_t data length
      * 
      * @return boolean.
      */
-    bool send_data(Bluetooth my_bt, 
-        bluetooth_comm_data_type data_type,
-        const uint8_t * data_ptr, uint16_t data_length);
+    bool send_data(Bluetooth * my_bt, bluetooth_comm_data_type data_type, const uint8_t * data_ptr, uint16_t data_length);
 
     /**
      * Send the content of the file over Bluetooth. 
-     * @param: Bluetooth object
+     * @param: Bluetooth object pointer
      * @param: bluetooth_comm_data_type data type
-     * @param: File object
+     * @param: File object pointer
      * 
      * @return: boolean
      */
-    bool send_data_file(Bluetooth my_bt, bluetooth_comm_data_type data_type, File my_file);
+    bool send_data_file(Bluetooth * my_bt, bluetooth_comm_data_type data_type, File * my_file);
+
+    /**
+     * Send next image from the SD card to phone.
+     * 
+     * @param: Bluetooth object pointer
+     */
+    bool send_next_image(Bluetooth * my_bt);
+
+    /**
+     * Give semaphore which indicates that queued data is transmitted. 
+     */
+    void give_data_semaphore();
 };
 
 

@@ -23,7 +23,8 @@ typedef enum {
     BLUETOOTH_DISCONNECTED = 3
 }_bluetooth_status_;
 
-const uint32_t MAX_LENGTH = 330;
+// maximum size of send packet is 1024
+const uint16_t MAX_LENGTH = 1024;
 
 class Bluetooth {
     private:
@@ -34,8 +35,8 @@ class Bluetooth {
     uint8_t _read_buffer[MAX_LENGTH];
     uint8_t _receive_length;
 
-    xSemaphoreHandle _receive_data_Semaphore;
-    xSemaphoreHandle _receive_data_mutex;
+    SemaphoreHandle_t _receive_data_Semaphore;
+    SemaphoreHandle_t _receive_data_mutex;
 
     const char * _bluetooth_status_as_string(_bluetooth_status_ st);
 

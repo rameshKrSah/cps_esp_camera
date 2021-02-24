@@ -8,6 +8,11 @@
  * 5. Remain in the deep sleep mode unless work is to be done.
  * 6. Maintain a RTC for time keeping. Query time over internet maybe at each reset.
  */
+
+
+// camera can send upto 5 Kilo Bytes, but in the phone side we can recieve at once 1058 bytes. 
+// The implementation of the input stream read is the problem. 
+// for now lets send 1Kb at one time.
  
 #include "Arduino.h"
 #include "soc/soc.h"           // Disable brownout problems
@@ -15,19 +20,31 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "FS.h"
+#include "esp_log.h"
 
 #include "utils.h"
 #include "camera.h"
 #include "sd_card.h"
 #include "bluetooth.h"
-#include"bluetooth_comm.h"
+#include "bluetooth_comm.h"
 
 #define TIME_TO_SLEEP  10        /* Time ESP32 will go to sleep (in seconds) */
 
+
+// Variable for the Bluetooth
 Bluetooth my_bluetooth;
 BluetoothCommunication my_bluetooth_comm;
+
+// Phone Bluetooth MAC address.
 uint8_t btServerAddress[6] = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E};
+
+// Deep sleep semaphore
 xSemaphoreHandle deep_sleep_semaphore;
+
+
+// File operation 
+File my_file;
+File root;
 
 /**
  * We will have two tasks. 
@@ -92,7 +109,7 @@ void bluetooth_task(void * params) {
     // send the data untill done or transmit fixed number of images.
     File my_file;
     if(sd_get_next_file(SD_MMC, "/", &my_file)){
-      my_bluetooth_comm.send_data_file(my_bluetooth, IMAGE_DATA, my_file);
+      my_bluetooth_comm.send_data_file(&my_bluetooth, IMAGE_DATA, &my_file);
     }
 
     // give the Semaphore so that the camera can be put to sleep.
@@ -104,11 +121,10 @@ void bluetooth_task(void * params) {
   }
 }
 
-File my_file;
-File root;
-
 // Setup Part
 void setup() {
+  esp_log_level_set("ESP", ESP_LOG_DEBUG);
+
   // Disable brownout detector
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
   
@@ -118,6 +134,9 @@ void setup() {
   }
   debug("configuring services");
 
+ // register Bluetooth callback for status update
+ my_bluetooth.set_status_callback(bt_status_callback);
+  
   // initialize the Bluetooth
  if(!my_bluetooth.init_bluetooth(btServerAddress))
  {
@@ -125,12 +144,11 @@ void setup() {
    return;
  }
 
- // register Bluetooth callbacks.
- my_bluetooth.set_status_callback(bt_status_callback);
+ // register the bluetooth callback for on receive 
  my_bluetooth.set_on_receive_data_callback(bt_data_received_callback);
-  
+
   // initialize the camera module
-   if (init_camera() != ESP_OK) {
+  if (init_camera() != ESP_OK) {
     debug("camera init failed");
     return;
   }
@@ -157,8 +175,8 @@ void setup() {
   // xTaskCreate(camera_task, "take pictue and save to sd card", 5000, NULL, 1, NULL);
   // xTaskCreate(bluetooth_task, "connect to phone and send data", 5000, NULL, 1, NULL);
 
-  root = SD_MMC.open("/");
-  Serial.printf("root address 0x%x, root value 0x%x\n", &root, root);
+//  root = SD_MMC.open("/");
+//  Serial.printf("root address 0x%x, root value 0x%x\n", &root, root);
 }
 
 
@@ -168,28 +186,28 @@ void loop() {
   // CORRUPT HEAP: Bad head at 0x3ffba4ec. Expected 0xabba1234 got 0x6974616d
 
   // open the next file in the directory
-  my_file = root.openNextFile();
-  while(my_file){
-    if(!my_file.isDirectory()){
-      Serial.print("  FILE: ");
-      Serial.print(my_file.name());
-      Serial.print("  SIZE: ");
-      Serial.println(my_file.size());
-      break;
-    }
-    my_file = root.openNextFile();
-  }
+  // my_file = root.openNextFile();
+  // while(my_file){
+  //   if(!my_file.isDirectory()){
+  //     Serial.print("  FILE: ");
+  //     Serial.print(my_file.name());
+  //     Serial.print("  SIZE: ");
+  //     Serial.println(my_file.size());
+  //     break;
+  //   }
+  //   my_file = root.openNextFile();
+  // }
 
   // uint8_t buffer[10];
   // uint32_t read_size = my_file.read(buffer, 10);
 
-  debug("waiting.....");
-  delay(1000);
+  // debug("waiting.....");
+  // delay(1000);
 
-  my_bluetooth_comm.send_data_file(my_bluetooth, IMAGE_DATA, my_file);
+  // my_bluetooth_comm.send_data_file(my_bluetooth, IMAGE_DATA, my_file);
 
-  debug("waiting.....");
-  delay(1000);
+  // debug("waiting.....");
+  // delay(1000);
   
   // debug("getting the file");
   // Serial.printf("my file address 0x%x, my file value 0x%x\n", &my_file, my_file);
@@ -199,10 +217,20 @@ void loop() {
   //   my_bluetooth_comm.send_data(my_bluetooth, IMAGE_DATA, &my_file);
   // }
 
-  my_file.close();
-  Serial.printf("my file address 0x%x, my file value 0x%x\n", &my_file, my_file);
+  // my_file.close();
+  // Serial.printf("my file address 0x%x, my file value 0x%x\n", &my_file, my_file);
 
-  delay(2000);
+  // my_bluetooth_comm.send_next_image(my_bluetooth, root);
+  uint8_t buffer[4096];
+
+  my_bluetooth_comm.send_data(&my_bluetooth, IMAGE_DATA, buffer, 4096);
+
+  // for (int i = 0; i < 100; i++) {
+  //   Serial.printf("at i %d\n", i);
+  //   my_bluetooth.bt_write_data(buffer, 1024);
+  // }
+  debug("============================================");
+  delay(60000);
 
   // // check whether the Bluetooth Connection is Intact or not.
   // if(my_bluetooth.get_bt_connection_status() != BLUETOOTH_CONNECTED) {
@@ -228,9 +256,7 @@ void loop() {
 //   // Turn off the on board LED
 //   turn_off_camera_flash();
 
-  // before going to sleep stop the bluetooth
-  // my_bluetooth.de_init_bluetooth();
-  // go_to_deep_sleep(TIME_TO_SLEEP);
+//   go_to_deep_sleep(TIME_TO_SLEEP);
 }
 
 
@@ -292,6 +318,7 @@ void bt_status_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
     case ESP_SPP_WRITE_EVT: // data write over Bluetooth is completed
       debug("cb: camera has written data on BT");
       Serial.printf("# bytes written %d\n", param->write.len);
+      my_bluetooth_comm.give_data_semaphore();
       break;
       
     case ESP_SPP_CONG_EVT: // congestion status of Bluetooth has changed

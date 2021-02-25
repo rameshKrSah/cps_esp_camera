@@ -21,15 +21,15 @@ static SemaphoreHandle_t _sd_mmc_mutex = NULL;
  */
 bool init_sd_card() {
  // start SD card and verify for the card.
-  debug("init_sd_card:starting SD card");
+  debug("init_sd_card: starting SD card");
   if(!SD_MMC.begin()){
-    debug("init_sd_card:sd card mount failed");
+    debug("init_sd_card: sd card mount failed");
     return false;
   }
   
   uint8_t cardType = SD_MMC.cardType();
   if(cardType == CARD_NONE){
-    debug("init_sd_card:no sd card attached");
+    debug("init_sd_card: no sd card attached");
     return false;
   }
 
@@ -100,14 +100,14 @@ bool save_image_to_sd_card(fs::FS &fs, camera_fb_t * fb) {
   
   // Path where new picture will be saved in SD Card
   String path = "/picture" + String(picture_number) +".jpg";
-  debug("save_image_to_sd_card: new picture file name: ");
+  debug("save_image_to_sd_card: file name: ");
   debug(path.c_str());
 
   // get the file object to write the image data to SD card 
   File file = fs.open(path.c_str(), FILE_WRITE);
   
   if(!file){
-    debug("save_image_to_sd_card:failed to open file in writing mode");
+    debug("save_image_to_sd_card: failed to open file in writing mode");
     return false;
   }
   else {
@@ -174,12 +174,12 @@ bool sd_get_next_file(fs::FS &fs, const char * dirname, File * my_file){
   File root = fs.open(dirname);
 
   if(!root){
-   debug("sd_get_next_file:Failed to open directory");
+   debug("sd_get_next_file: failed to open directory");
     return false;
   }
 
   if(!root.isDirectory()){
-    Serial.printf("sd_get_next_file:%s is not a directory\n", dirname);
+    Serial.printf("sd_get_next_file: %s is not a directory\n", dirname);
     return false;
   }
 
@@ -191,7 +191,7 @@ bool sd_get_next_file(fs::FS &fs, const char * dirname, File * my_file){
       Serial.print(file.name());
       Serial.print("  SIZE: ");
       Serial.println(file.size());
-      Serial.printf("sd_get_next_file:current file address 0x%x, current file value 0x%x\n", &file, file);
+      // Serial.printf("sd_get_next_file: current file address 0x%x, current file value 0x%x\n", &file, file);
       *my_file = file;
       // root.close();
       return true;

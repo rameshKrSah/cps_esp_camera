@@ -27,6 +27,7 @@
 #include "sd_card.h"
 #include "bluetooth.h"
 #include "bluetooth_comm.h"
+#include "time_manager.h"
 
 #define TIME_TO_SLEEP  120        /* Time ESP32 will go to sleep (in seconds) */
 
@@ -88,6 +89,9 @@ void camera_task(void * params) {
   }
 }
 
+const char * TIME_COMMAND = "time please?";
+
+
 /**
  * Task to connect to phone via Bluetooth and send pictures stored in the SD card.
  */
@@ -95,28 +99,31 @@ void bluetooth_task(void * params) {
   debug("bluetooth task started!");
 
   for(;;) {
-    // check whether we have data in the SD card or not
-
     // check whether we have connection or not
     if(my_bluetooth.get_bt_connection_status() != BLUETOOTH_CONNECTED) {
       my_bluetooth.bt_reconnect();
     }
 
+    my_bluetooth_comm.send_data(&my_bluetooth, GENERAL_DATA, (uint8_t *)TIME_COMMAND, strlen(TIME_COMMAND));
+    go_to_deep_sleep(300);
+
+    // check whether we have data in the SD card or not
+
     // send the data untill done or transmit fixed number of images.
-    acquire_sd_mmc();
-    my_bluetooth_comm.send_next_image(&my_bluetooth, SD_MMC);
-    release_sd_mmc();
+    // acquire_sd_mmc();
+    // my_bluetooth_comm.send_next_image(&my_bluetooth, SD_MMC);
+    // release_sd_mmc();
 
     // if(sd_get_next_file(SD_MMC, "/", &my_file)){
     //   my_bluetooth_comm.send_data_file(&my_bluetooth, IMAGE_DATA, &my_file);
     // }
 
     // give the Semaphore so that the camera can be put to sleep.
-    xSemaphoreGive(deep_sleep_semaphore);
+    // xSemaphoreGive(deep_sleep_semaphore);
 
     // delete the task.
-    debug("bluetooth_task:deleting bluetooth task");
-    vTaskDelete(NULL);
+    // debug("bluetooth_task:deleting bluetooth task");
+    // vTaskDelete(NULL);
   }
 }
 
@@ -169,14 +176,14 @@ void setup() {
   }
 
   // Schedule the tasks. 
-  xTaskCreate(camera_task, "take pictue and save to sd card", 4096, NULL, 1, NULL);
+  // xTaskCreate(camera_task, "take pictue and save to sd card", 4096, NULL, 1, NULL);
   xTaskCreate(bluetooth_task, "connect to phone and send data", 4096, NULL, 1, NULL);
 }
 
 
 // Loop part of the code. 
 void loop() {
-  
+  delay(portMAX_DELAY);
 }
 
 

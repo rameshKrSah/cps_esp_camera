@@ -14,7 +14,7 @@ void debug(const char * message){
  * Put's the ESP32 to deep sleep.
  */
 void go_to_deep_sleep(long sleep_time_seconds) {
-  debug("going to deep sleep");
+  debug("go_to_deep_sleep");
 
 //  WiFi.disconnect();
 //  WiFi.mode(WIFI_OFF);

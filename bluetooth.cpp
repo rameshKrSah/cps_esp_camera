@@ -15,7 +15,7 @@ Bluetooth::Bluetooth() {
     _bt_device_name = "cameraModule";
     _bt_connection_flag = BLUETOOTH_NONE;
 
-    debug("creating Bluetooth semaphore and mutex");
+    debug("Bluetooth: creating rcv data semaphore and mutex");
     if(_receive_data_Semaphore == NULL){
         _receive_data_Semaphore = xSemaphoreCreateBinary();
         xSemaphoreTake(_receive_data_Semaphore, 0);
@@ -56,7 +56,7 @@ bool Bluetooth::init_bluetooth(uint8_t mac[6]) {
 
     if (!set_server_mac(mac)) {
         // raise an error
-        debug("Bluetooth needs server MAC address to work.");
+        debug("init_bluetooth: no server MAC");
         return false;
     }
 
@@ -67,11 +67,11 @@ bool Bluetooth::init_bluetooth(uint8_t mac[6]) {
 
     // check if we are connected or not. if not try again.
    if(status) {
-       debug("bt connected to phone");
+       debug("init_bluetooth: connected");
        return true;
    }else {
        while(!_bt_serial.connected(1000)) {
-           debug("camera failed to connect. make sure phone is available and in range"); 
+           debug("init_bluetooth: failed to connect"); 
        }
    }
     
@@ -131,7 +131,7 @@ _bluetooth_status_ Bluetooth::get_bt_connection_status() {
  * Set the Bluetooth connection flag.
  */
 void Bluetooth::set_bt_connection_status(_bluetooth_status_ status) {
-    Serial.printf("setting connection status %s\n", _bluetooth_status_as_string(status));
+    Serial.printf("set_bt_connection_status: %s\n", _bluetooth_status_as_string(status));
     _bt_connection_flag = status;
 }
 
@@ -141,12 +141,12 @@ void Bluetooth::set_bt_connection_status(_bluetooth_status_ status) {
 int Bluetooth::bt_write_data(const uint8_t * buff, int len) {
   if((buff != NULL) && (len > 0)){
     // pass the data over to the output stream of Bluetooth
-    debug("bt writing data...");
+    debug("bt_write_data: sending ...");
     return _bt_serial.write(buff, len);
   }
 
   // if not return failed status
-  debug("bluetooth write failed");
+  debug("bt_write_data: failed");
   return STATUS_NOT_OK;
 }
 
@@ -156,7 +156,7 @@ int Bluetooth::bt_write_data(const uint8_t * buff, int len) {
 void Bluetooth::bt_reconnect() {
     if (_bt_serial.hasClient() == 0) {
         // camera is not connected to any device
-        debug("camera not connected, trying to reconnect");
+        debug("bt_reconnect: reconnecting");
         _bt_serial.connect();   // the same MAC address is used for reconnection
     }
 }
@@ -189,7 +189,7 @@ bool Bluetooth::take_rcv_data_semaphore() {
         return true;
     }
 
-    debug("failed to obtain the receive data semaphore");
+    debug("take_rcv_data_semaphore: failed");
     return false;
 }
 
@@ -207,7 +207,7 @@ void Bluetooth::copy_received_data(const uint8_t * buff, uint8_t len) {
 
     // give the Semaphore for any process waiting on the receive data.
     xSemaphoreGive(_receive_data_Semaphore);
-    debug("received data copied, mutex released, and semaphore given");
+    debug("copy_received_data: mutex released, and semaphore given");
 }
 
 /**

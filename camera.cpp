@@ -31,18 +31,18 @@ esp_err_t init_camera() {
 
   // set the frame size and picture quality
   if(psramFound()){
-    debug("frame size: UXGA, quality: 12");
+    debug("init_camera: frame size UXGA, quality 12");
     config.frame_size = FRAMESIZE_UXGA; // FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
     config.jpeg_quality = 10;
     config.fb_count = 2;
   } else {
-    debug("frame size: SVGA, quality: 12");
+    debug("init_camera: frame size SVGA, quality 12");
     config.frame_size = FRAMESIZE_SVGA;
     config.jpeg_quality = 12;
     config.fb_count = 1;
   }
   
-  debug("starting camera");
+  debug("init_camera: starting camera");
   return esp_camera_init(&config);
 }
 
@@ -57,10 +57,10 @@ camera_fb_t * take_picture() {
   // get the pointer to the camera frame buffer which has the content of latest photo
   fb = esp_camera_fb_get();  
   if(!fb) {
-    debug("camera capture failed, trying again");
+    debug("take_picture: failed, trying again");
     fb = esp_camera_fb_get();
     if(!fb) {
-      debug("camera capture failed again");
+      debug("take_picture: capture failed again");
       return NULL;
     }
   }

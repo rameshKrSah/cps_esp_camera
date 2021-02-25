@@ -73,6 +73,7 @@
         "xstddef": "cpp",
         "xtr1common": "cpp",
         "*.tcc": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "esp32-hal.h": "c"
     }
 }

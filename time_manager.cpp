@@ -1,17 +1,55 @@
 
-// #include "time.h"
-// #include "esp_timer.h"
-// #include "esp32-hal.h"
+#include <ESP32Time.h>
+#include "time_manager.h"
 
-// void printLocalTime()
-// {
-//   struct tm timeinfo;
-//   if (!getLocalTime(&timeinfo)) {
-//     Serial.println("Failed to obtain time");
-//     return;
-//   }
-//   Serial.print(&timeinfo, "%A, %B %d %Y %H:%M:%S");//Friday, February 22 2019 22:37:45
-// }
+ESP32Time rtc;
+
+/**
+ * Set the RTC time using the epoch time.
+ * @param: uint64_t seconds elapsed time
+ */
+void set_rtc_time(uint64_t epoch_time){
+  rtc.setTime(30, 24, 15, 17, 1, 2021); // 17th Jan 2021 15:24:30
+}
+
+String get_rtc_time_as_string() {
+  // return rtc_time.getTime("%d-%m-%Y:%H-%M-%S");
+
+  Serial.println(rtc.getTime());          //  (String) 15:24:38
+  Serial.println(rtc.getDate());          //  (String) Sun, Jan 17 2021
+  Serial.println(rtc.getDate(true));      //  (String) Sunday, January 17 2021
+  Serial.println(rtc.getDateTime());      //  (String) Sun, Jan 17 2021 15:24:38
+  Serial.println(rtc.getDateTime(true));  //  (String) Sunday, January 17 2021 15:24:38
+  Serial.println(rtc.getTimeDate());      //  (String) 15:24:38 Sun, Jan 17 2021
+  Serial.println(rtc.getTimeDate(true));  //  (String) 15:24:38 Sunday, January 17 2021
+
+  Serial.println(rtc.getMicros());        //  (long)    723546
+  Serial.println(rtc.getMillis());        //  (long)    723
+  Serial.println(rtc.getEpoch());         //  (long)    1609459200
+  Serial.println(rtc.getSecond());        //  (int)     38    (0-59)
+  Serial.println(rtc.getMinute());        //  (int)     24    (0-59)
+  Serial.println(rtc.getHour());          //  (int)     3     (0-12)
+  Serial.println(rtc.getHour(true));      //  (int)     15    (0-23)
+  Serial.println(rtc.getAmPm());          //  (String)  pm
+  Serial.println(rtc.getAmPm(true));      //  (String)  PM
+  Serial.println(rtc.getDay());           //  (int)     17    (1-31)
+  Serial.println(rtc.getDayofWeek());     //  (int)     0     (0-6)
+  Serial.println(rtc.getDayofYear());     //  (int)     16    (0-365)
+  Serial.println(rtc.getMonth());         //  (int)     0     (0-11)
+  Serial.println(rtc.getYear());          //  (int)     2021
+
+  return rtc.getTimeDate(true);
+}
+
+void printLocalTime()
+{
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.print(&timeinfo, "%A, %B %d %Y %H:%M:%S");//Friday, February 22 2019 22:37:45
+}
 
 
 /*

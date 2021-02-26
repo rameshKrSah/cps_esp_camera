@@ -104,7 +104,7 @@ void bluetooth_task(void * params) {
       my_bluetooth.bt_reconnect();
     }
 
-    my_bluetooth_comm.send_data(&my_bluetooth, GENERAL_DATA, (uint8_t *)TIME_COMMAND, strlen(TIME_COMMAND));
+    my_bluetooth_comm.send_data(&my_bluetooth, BT_REQUEST, (uint8_t *)TIME_COMMAND, strlen(TIME_COMMAND));
     go_to_deep_sleep(300);
 
     // check whether we have data in the SD card or not

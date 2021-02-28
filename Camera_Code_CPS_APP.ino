@@ -89,8 +89,6 @@ void camera_task(void * params) {
   }
 }
 
-const char * TIME_COMMAND = "time please?";
-
 
 /**
  * Task to connect to phone via Bluetooth and send pictures stored in the SD card.
@@ -104,12 +102,13 @@ void bluetooth_task(void * params) {
       my_bluetooth.bt_reconnect();
     }
 
-    my_bluetooth_comm.send_data(&my_bluetooth, BT_REQUEST, (uint8_t *)TIME_COMMAND, strlen(TIME_COMMAND));
+    // my_bluetooth_comm.send_data(&my_bluetooth, BT_REQUEST, (uint8_t *)TIME_COMMAND, strlen(TIME_COMMAND));
+    my_bluetooth_comm.request_for_time(&my_bluetooth);
     go_to_deep_sleep(300);
 
     // check whether we have data in the SD card or not
 
-    // send the data untill done or transmit fixed number of images.
+    // send the data untill done or transmit fixed number of images. 1614487522359
     // acquire_sd_mmc();
     // my_bluetooth_comm.send_next_image(&my_bluetooth, SD_MMC);
     // release_sd_mmc();

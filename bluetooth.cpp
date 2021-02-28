@@ -185,7 +185,7 @@ const char * Bluetooth::_bluetooth_status_as_string(_bluetooth_status_ st) {
 }
 
 bool Bluetooth::take_rcv_data_semaphore() {
-    if(xSemaphoreTake(_receive_data_Semaphore, ( TickType_t ) 50) == pdTRUE){
+    if(xSemaphoreTake(_receive_data_Semaphore, ( TickType_t ) 1000) == pdTRUE){
         return true;
     }
 
@@ -193,16 +193,24 @@ bool Bluetooth::take_rcv_data_semaphore() {
     return false;
 }
 
+/**
+ * Release the receive data mutex.
+ */
+void Bluetooth::give_rcv_data_mutex(){
+    debug("give_rcv_data_mutex");
+    xSemaphoreGive(_receive_data_mutex);
+}
 
 /**
  * Copy the data received from the Bluetooth in the receive buffer.
  * @param: const uint8_t * buff
  * @param: uint8_t len
  */
-void Bluetooth::copy_received_data(const uint8_t * buff, uint8_t len) {
+void Bluetooth::copy_received_data(const uint8_t * buff, uint16_t len) {
     // we may need mutex to protect the receive data buffer to be free before writing into it.
-    xSemaphoreTake(_receive_data_mutex, ( TickType_t ) 5);
+    xSemaphoreTake(_receive_data_mutex, ( TickType_t ) 50);
     memcpy(_read_buffer, buff, len);
+    _receive_length = len;
     xSemaphoreGive(_receive_data_mutex);
 
     // give the Semaphore for any process waiting on the receive data.
@@ -214,10 +222,15 @@ void Bluetooth::copy_received_data(const uint8_t * buff, uint8_t len) {
  * Get the first byte from the receive buffer.
  * @return uint8_t
  */
-uint8_t Bluetooth::get_recv_buffer() {
-    uint8_t temp;
+uint8_t * Bluetooth::get_recv_buffer() {
     xSemaphoreTake(_receive_data_mutex, ( TickType_t ) 5);
-    temp = _read_buffer[0];
-    xSemaphoreGive(_receive_data_mutex);
-    return temp;
+    return _read_buffer;
+}
+
+/**
+ * Get the received data length on Bluetooth.
+ * @return uint16_t
+ */
+uint16_t Bluetooth::get_recv_buffer_length() {
+    return _receive_length;
 }

@@ -5,42 +5,103 @@
 #include "bluetooth.h"
 #include "FS.h"
 
-typedef enum {
-    IMAGE_DATA = 0xA0,
-    GENERAL_DATA = 0xB0
-}bluetooth_comm_data_type;
+// typedef enum {
+//     IMAGE_DATA = 0xA0,
+//     GENERAL_DATA = 0xB0
+// }bluetooth_comm_data_type;
+
+
+/**
+ * Bluetooth data is sent and received in packets, with each packet having header information and data payload.
+ * The first byte tells whether this transmission is a BLUETOOTH_REQUEST, DATA_TRANSFER, or a RESPONSE_PACKET.
+ * The second byte futher distills the request, data, or reponse into different categories.
+ * The next two bytes carries the length of the payload.
+ * The next two bytes carries the packet number for the data payload.
+ * Remaining bytes carries the data payload.
+ * 
+ * -----------------------------------------------------------------------------------------------------------------
+ * | BLUETOOTH_REQUEST or DATA_TRANSFER or RESPONSE_PACKET | CATEGORIES | PAYLOAD LENGTH | PACKET NUMBER | PAYLOAD |
+ * -----------------------------------------------------------------------------------------------------------------
+ * 
+ */
 
 typedef enum {
-    BT_REQUEST = 0x00,
-    BT_DATA = 0x0A
+    BT_REQUEST = 0x0A,
+    BT_DATA = 0x0B,
+    BT_RESPONSE = 0x0C
 }_bluetooth_comm_type;
+
+typedef enum {
+    TIME_REQUEST = 0x00,
+    IMAGE_INCOMING_REQUEST = 0x01,
+    ARE_YOU_READY_REQUEST = 0x02,
+    IMAGE_SENT_REQUEST = 0x03
+}_bluetooth_request_type; 
+
+typedef enum {
+    IMAGE_DATA = 0x00,
+    OTHER_DATA = 0x01
+}_bluetooth_data_type;
+
+typedef enum {
+    RESPONSE_FOR_TIME_REQUEST = 0x00,
+    RESPONSE_FOR_IMAGE_INCOMING_REQUEST = 0x01,
+    RESPONSE_FOR_ARE_YOU_READY_REQUEST = 0x02,
+    RESPONSE_FOR_IMAGE_SENT_REQUEST = 0x03,
+    RESPONSE_FOR_IMAGE_DATA = 0x04,
+    RESPONSE_FOR_OTHER_DATA = 0x05
+}_bluetooth_response_type;
+
+// typedef enum {
+//     TIME_REQUEST = 0x00,
+//     IMAGE_INCOMING_REQUEST = 0x01,
+//     ARE_YOU_READY_REQUEST = 0x02,
+//     IMAGE_SENT_REQUEST = 0x03,
+//     IMAGE_DATA = 0x00,
+//     OTHER_DATA = 0x01,
+//     RESPONSE_FOR_TIME_REQUEST = 0x00,
+//     RESPONSE_FOR_IMAGE_INCOMING_REQUEST = 0x01,
+//     RESPONSE_FOR_ARE_YOU_READY_REQUEST = 0x02,
+//     RESPONSE_FOR_IMAGE_DATA = 0x03,
+//     RESPONSE_FOR_OTHER_DATA = 0x04
+// }
+
+static const char * _time_request = "time please";
+static const char * _image_request = "image incoming";
+static const char * _u_ready_request = "are you ready";
+static const char * _image_sent_request = "image sent";
+
+static const char * _am_ready_response = "i am ready";
+static const char * _ok_response = "ok";
+static const char * _image_received_response = "image received";
 
 
 class BluetoothCommunication {
     private:
+
     SemaphoreHandle_t _data_written_semaphore = NULL;
     static const uint8_t END_CHARACTER = '#';
 
-    // comm type (1), payload length byte (2), packet number (2), and end character (1)
-    static const uint8_t _PREAMBLE_SIZE = 5;
-    static const uint16_t _PAYLOAD_SPACE = MAX_LENGTH - _PREAMBLE_SIZE + 1;
+    // comm type (1), categories(1), payload length byte (2), packet number (2)
+    static const uint8_t _PREAMBLE_SIZE = 6;
+    static const uint16_t _PAYLOAD_SPACE = MAX_LENGTH - _PREAMBLE_SIZE;
 
     // static const uint8_t IMAGE_TYPE_IDENTIFIER = 0xA0;
     // static const uint8_t GENERAL_TYPE_IDENTIFIER = 0xB0;
 
     uint16_t _packet_number = 0;
     uint16_t _packet_length = 0;
-    uint8_t * _temp_buffer_buffer = NULL;
     uint8_t _packet_buffer[MAX_LENGTH + 1];
 
 
     /**
      * Create the packet to be sent over Bluetooth.
      * @param: _bluetooth_comm_type comm_type
+     * @param: Bluetooth communication category
      * @param: uint8_t * pointer to payload
      * @param: uint16_t payload_len
      */
-    void _create_packet(_bluetooth_comm_type comm_type, const uint8_t * payload, 
+    void _create_packet(_bluetooth_comm_type comm_type, uint8_t category, const uint8_t * payload, 
             uint16_t payload_len);
 
 
@@ -57,15 +118,15 @@ class BluetoothCommunication {
      * 
      * @param: Bluetooth object pointer (must use pointer otherwise the )
      * @param: Bluetooth communication type
+     * @param: Bluetooth communication category
      * @param: uint8_t * pointer to payload
      * @param: uint16_t payload length
      * @param: bool whether to wait for response or not.
      */
-    bool _send_data(Bluetooth * my_bt, _bluetooth_comm_type comm_type, const uint8_t * data_ptr, 
-        uint16_t data_length, bool response);
+    bool _send_data(Bluetooth * my_bt, _bluetooth_comm_type comm_type, uint8_t category,
+        const uint8_t * data_ptr, uint16_t data_length, bool response);
 
     public:
-
     BluetoothCommunication();
     ~BluetoothCommunication();
 
@@ -104,6 +165,11 @@ class BluetoothCommunication {
      * Give semaphore which indicates that queued data is transmitted. 
      */
     void give_data_semaphore();
+
+    /**
+     * Send a request for current time to the phone. If response received set the RTC time. 
+     */
+    bool request_for_time(Bluetooth * my_bt);
 };
 
 

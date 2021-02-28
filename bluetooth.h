@@ -32,8 +32,9 @@ class Bluetooth {
     String _bt_device_name;
     uint8_t _bt_server_mac[6];
     _bluetooth_status_ _bt_connection_flag;
+    
     uint8_t _read_buffer[MAX_LENGTH];
-    uint8_t _receive_length;
+    uint16_t _receive_length;
 
     SemaphoreHandle_t _receive_data_Semaphore = NULL;
     SemaphoreHandle_t _receive_data_mutex = NULL;
@@ -103,19 +104,30 @@ class Bluetooth {
      * Take the receive data semaphore.
      */
     bool take_rcv_data_semaphore();
+    
+    /**
+     * Release the receive data mutex.
+     */
+    void give_rcv_data_mutex();
 
     /**
      * Copy the data received from the Bluetooth in the receive buffer.
      * @param: const uint8_t * buff
-     * @param: uint8_t len
+     * @param: uint16_t len
      */
-    void copy_received_data(const uint8_t * buff, uint8_t len);
+    void copy_received_data(const uint8_t * buff, uint16_t len);
 
     /**
-     * Get the first byte from the receive buffer.
-     * @return uint8_t
+     * Get the pointer to receive buffer.
+     * @return uint8_t *
      */
-    uint8_t get_recv_buffer();
+    uint8_t * get_recv_buffer();
+    
+    /**
+     * Get the received data length on Bluetooth.
+     * @return uint16_t
+     */
+    uint16_t get_recv_buffer_length();
 };
 
 

@@ -36,6 +36,8 @@
 #include "bluetooth_comm.h"
 #include "utils.h"
 #include "sd_card.h"
+#include "time_manager.h"
+
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -138,7 +140,7 @@ bool BluetoothCommunication::send_data_file(Bluetooth * my_bt, _bluetooth_comm_t
         Serial.printf("read %d bytes from file\n", read_size);
 
         // send the read bytes to phone
-        status = _send_data(my_bt, comm_type, NULL, read_size, false);
+        // status = _send_data(my_bt, comm_type, NULL, read_size, false);
         if(status) {
             total_bytes_sent += read_size;
         }
@@ -197,7 +199,7 @@ bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type c
 
             // copy the data into the buffer
             memcpy(_packet_buffer + _PREAMBLE_SIZE, data_ptr + start, sending_bytes);
-            status = _send_data(my_bt, comm_type, NULL, sending_bytes, true);
+            // status = _send_data(my_bt, comm_type, NULL, sending_bytes, true);
 
             if(status) {
                 total_data_length -= sending_bytes;
@@ -214,10 +216,52 @@ bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type c
     } else {
         // copy the data into the buffer
         memcpy(_packet_buffer + _PREAMBLE_SIZE, data_ptr, data_length);
-        status = _send_data(my_bt, comm_type, NULL, data_length, true);
+        // status = _send_data(my_bt, comm_type, NULL, data_length, true);
     }
 
     return status;
+}
+
+
+/**
+ * Send a Bluetooth request for current time. If response received, set the RTC time.
+ * @param: Bluetooth object pointer
+ * @return: boolean
+ */
+bool BluetoothCommunication::request_for_time(Bluetooth * my_bt){
+    bool status = false;
+
+    // get_rtc_time_as_string();
+
+    status = _send_data(my_bt, BT_REQUEST, TIME_REQUEST, (uint8_t *)_time_request, strlen(_time_request), true);
+    if(status) {
+        // we have the current time, mills from epoch in the Bluetooth receive buffer. 
+        // Extract that and set the RTC time.
+        uint8_t * rcv_data;
+        uint16_t rcv_length = my_bt->get_recv_buffer_length();
+        rcv_data = (uint8_t *) malloc(rcv_length * sizeof(uint8_t));
+        memcpy(rcv_data, my_bt->get_recv_buffer(), rcv_length);
+
+        // release the recived data buffer mutex
+        my_bt->give_rcv_data_mutex();
+
+        Serial.printf("request_for_time: response length: %d\n", rcv_length);
+
+        if(rcv_data[0] == BT_RESPONSE && rcv_data[1] == RESPONSE_FOR_TIME_REQUEST){
+            // uint16_t data_length = (uint16_t)(rcv_data[2] | rcv_data[3] >> 8);
+            // Serial.printf("data length %d\n", data_length);
+
+            uint64_t time_in_millis;
+            memcpy(&time_in_millis, &rcv_data[_PREAMBLE_SIZE], 8);
+            // Serial.printf("%llu\n", time_in_millis);
+            // Serial.printf("%d\n", time_in_millis);
+            
+            // set the current timestamp
+            set_rtc_time(time_in_millis);
+        }
+
+        // get_rtc_time_as_string();
+    }
 }
 
 /**
@@ -225,18 +269,19 @@ bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type c
  * 
  * @param: Bluetooth object pointer (must use pointer otherwise the )
  * @param: Bluetooth communication type
+ * @param: Bluetooth communication category
  * @param: uint8_t * pointer to payload
  * @param: uint16_t payload length
  * @param: bool whether to wait for response or not.
  */
-bool BluetoothCommunication::_send_data(Bluetooth * my_bt, _bluetooth_comm_type comm_type, 
+bool BluetoothCommunication::_send_data(Bluetooth * my_bt, _bluetooth_comm_type comm_type, uint8_t category,
     const uint8_t * data_ptr, uint16_t data_length, bool response) {
 
     bool status = false;
     uint8_t tx_failed = 0;
     
     // create the data packet
-    _create_packet(comm_type, data_ptr, data_length);
+    _create_packet(comm_type, category, data_ptr, data_length);
 
     while(true){
         // we have the data packet. send it over Bluetooth and wait for the response
@@ -277,19 +322,25 @@ bool BluetoothCommunication::_send_data(Bluetooth * my_bt, _bluetooth_comm_type 
  * @return: boolean
  */
 bool BluetoothCommunication::_wait_for_response(Bluetooth * my_bt, _bluetooth_comm_type comm_type) {
+    bool status = false;
+
     // wait for the Semaphore for 50 ticks 
     if(my_bt->take_rcv_data_semaphore()) {
         debug("_wait_for_response: response received from phone");
-        // if we reach here, then we have received response and it is in the receive buffer.
-        if(my_bt->get_recv_buffer() == comm_type){
-            // data was sent succesully
-            debug("_wait_for_response: data type matched");
-            return true;
-        }
+        status = true;
+        
+        // // if we reach here, then we have received response and it is in the receive buffer.
+        // uint8_t * buff = my_bt->get_recv_buffer();
+        // if(*(buff) == comm_type){
+        //     debug("_wait_for_response: data type matched");
+
+        //     // now process the response
+
+        // }
     }
 
     // data transmission Failed
-    return false;
+    return status;
 }
 
 /**
@@ -298,20 +349,18 @@ bool BluetoothCommunication::_wait_for_response(Bluetooth * my_bt, _bluetooth_co
  * @param: uint8_t * pointer to payload
  * @param: uint16_t payload_len
  */
-void BluetoothCommunication::_create_packet(_bluetooth_comm_type comm_type, const uint8_t * payload, 
-        uint16_t payload_len){
+void BluetoothCommunication::_create_packet(_bluetooth_comm_type comm_type, uint8_t category, 
+        const uint8_t * payload, uint16_t payload_len){
 
     _packet_length = 0;
-    // uint8_t * packet_bf_ptr = _packet_buffer;
-    // Serial.printf("dt ptr 0x%X, length %d\n", packet_bf_ptr, _packet_length);
 
-    // is this request or data
+    // is this request or data or response
     *(_packet_buffer + _packet_length) = (uint8_t)comm_type;
     _packet_length += 1;
 
-    // set the data type
-    // *(_packet_buffer + _packet_length) = (uint8_t)data_type;
-    // _packet_length += 1;
+    // set the packet category
+    *(_packet_buffer + _packet_length) = (uint8_t)category;
+    _packet_length += 1;
     
     // set the payload length
     *(_packet_buffer + _packet_length) = (uint16_t)payload_len;
@@ -324,16 +373,14 @@ void BluetoothCommunication::_create_packet(_bluetooth_comm_type comm_type, cons
     Serial.printf("_create_packet packet number %d\n", _packet_number);
         
     // Payload is already in the buffer, just increment the payload length
-    // memcpy(_packet_buffer+_packet_length, payload, payload_len);
+    memcpy(_packet_buffer+_packet_length, payload, payload_len);
     _packet_length += payload_len;
-    
-    // finally copy the ending character
-    *(_packet_buffer + _packet_length) = (uint8_t)END_CHARACTER;
-    _packet_length += 1;
     
     // with this we have the packet, return back to the calling function.
     Serial.printf("_create_packet: length: %d\n", _packet_length);
+    // Serial.printf("_create_packet: packet %s\n", (char *)_packet_buffer);
 }
+
 
 /**
  * Give semaphore which indicates that queued data is transmitted. 

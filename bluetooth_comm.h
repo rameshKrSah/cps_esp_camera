@@ -52,19 +52,6 @@ typedef enum {
     RESPONSE_FOR_OTHER_DATA = 0x05
 }_bluetooth_response_type;
 
-// typedef enum {
-//     TIME_REQUEST = 0x00,
-//     IMAGE_INCOMING_REQUEST = 0x01,
-//     ARE_YOU_READY_REQUEST = 0x02,
-//     IMAGE_SENT_REQUEST = 0x03,
-//     IMAGE_DATA = 0x00,
-//     OTHER_DATA = 0x01,
-//     RESPONSE_FOR_TIME_REQUEST = 0x00,
-//     RESPONSE_FOR_IMAGE_INCOMING_REQUEST = 0x01,
-//     RESPONSE_FOR_ARE_YOU_READY_REQUEST = 0x02,
-//     RESPONSE_FOR_IMAGE_DATA = 0x03,
-//     RESPONSE_FOR_OTHER_DATA = 0x04
-// }
 
 static const char * _time_request = "time please";
 static const char * _image_request = "image incoming";
@@ -78,16 +65,11 @@ static const char * _image_received_response = "image received";
 
 class BluetoothCommunication {
     private:
-
     SemaphoreHandle_t _data_written_semaphore = NULL;
-    static const uint8_t END_CHARACTER = '#';
-
+    
     // comm type (1), categories(1), payload length byte (2), packet number (2)
     static const uint8_t _PREAMBLE_SIZE = 6;
     static const uint16_t _PAYLOAD_SPACE = MAX_LENGTH - _PREAMBLE_SIZE;
-
-    // static const uint8_t IMAGE_TYPE_IDENTIFIER = 0xA0;
-    // static const uint8_t GENERAL_TYPE_IDENTIFIER = 0xB0;
 
     uint16_t _packet_number = 0;
     uint16_t _packet_length = 0;
@@ -107,11 +89,10 @@ class BluetoothCommunication {
 
     /**
      * Wait for the response from the phone on Bluetooth and verfies the response.
-     * @param: Bluetooth communication type
-     * @param: Bluetooth my_bt
+     * @param: Bluetooth object pointer
      * @return: boolean
      */
-    bool _wait_for_response(Bluetooth * my_bt, _bluetooth_comm_type comm_type);
+    bool _wait_for_response(Bluetooth * my_bt);
 
     /**
      * Send data over Bluetooth. All other send functions calls this function to send data. 
@@ -125,6 +106,48 @@ class BluetoothCommunication {
      */
     bool _send_data(Bluetooth * my_bt, _bluetooth_comm_type comm_type, uint8_t category,
         const uint8_t * data_ptr, uint16_t data_length, bool response);
+
+    /**
+     * This function completes the necessary steps required for image transfer. The procedure for image transfer are:
+     *  1) Send the image incoming request.
+     *  2) Wait for the response. On invalid response return false.
+     *  3) Send are you ready request.
+     *  4) Wait for the response. On invalid response return false.
+     *  
+     * @param Bluetooth object pointer
+     * @return boolean True if all checks are passed else false.
+     */
+    bool _image_transfer_confirmation(Bluetooth * my_bt);
+
+    /**
+     * Send the are you ready request and verify the response.
+     * @param: Bluetooth * pointer
+     * @return Boolean
+     */
+    bool _send_are_you_ready_request(Bluetooth * my_bt);
+
+    /**
+     * Send incoming image request and verify the response.
+     * @param Bluetooth * pointer
+     * @return boolean
+     */
+    bool _send_image_incoming_request(Bluetooth * my_bt);
+
+    /**
+     * Send image sent request and verify the response. 
+     * @param: Bluetooth * pointer
+     * @return: Boolean
+     */
+    bool _send_image_sent_request(Bluetooth * my_bt);
+
+    /**
+     * Verify response of a Bluetooth communication.
+     * @param: Bluetooth pointer 
+     * @param: Expected Bluetooth communication type.
+     * @param: Expected Bluetooth response type.
+     * @return: Boolean
+     */
+    bool _verify_response(Bluetooth * my_bt, uint8_t comm_type, uint8_t check_category);
 
     public:
     BluetoothCommunication();
@@ -146,12 +169,13 @@ class BluetoothCommunication {
     /**
      * Send the content of the file over Bluetooth. 
      * @param: Bluetooth object pointer
-     * @param: Bluetooth communication type.
-     * @param: File object pointer
+     * @param: Bluetooth communication type
+     * @param: Bluetooth communication category
+     * @param: FILE object pointer
      * 
      * @return: boolean
      */
-    bool send_data_file(Bluetooth * my_bt, _bluetooth_comm_type comm_type, File * my_file);
+    bool send_data_file(Bluetooth * my_bt, _bluetooth_comm_type comm_type, uint8_t category, File * my_file);
 
     /**
      * Send next image from the SD card to phone.

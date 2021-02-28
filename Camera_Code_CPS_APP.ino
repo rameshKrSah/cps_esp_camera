@@ -81,7 +81,7 @@ void camera_task(void * params) {
   for(;;) {
     // wait for the semaphore for deep sleep
     if(xSemaphoreTake(deep_sleep_semaphore, portMAX_DELAY) == pdTRUE){
-      debug("camera_task:obtained sleep semaphore. going to sleep....");
+      Serial.println("camera_task:obtained sleep semaphore. going to sleep....");
       
       // go to deep sleep
       go_to_deep_sleep(TIME_TO_SLEEP);
@@ -102,16 +102,16 @@ void bluetooth_task(void * params) {
       my_bluetooth.bt_reconnect();
     }
 
-    // my_bluetooth_comm.send_data(&my_bluetooth, BT_REQUEST, (uint8_t *)TIME_COMMAND, strlen(TIME_COMMAND));
     my_bluetooth_comm.request_for_time(&my_bluetooth);
+
+    delay(500);
+
+    // send the data untill done or transmit fixed number of images.
+    acquire_sd_mmc();
+    my_bluetooth_comm.send_next_image(&my_bluetooth, SD_MMC);
+    release_sd_mmc();
+
     go_to_deep_sleep(300);
-
-    // check whether we have data in the SD card or not
-
-    // send the data untill done or transmit fixed number of images. 1614487522359
-    // acquire_sd_mmc();
-    // my_bluetooth_comm.send_next_image(&my_bluetooth, SD_MMC);
-    // release_sd_mmc();
 
     // if(sd_get_next_file(SD_MMC, "/", &my_file)){
     //   my_bluetooth_comm.send_data_file(&my_bluetooth, IMAGE_DATA, &my_file);
@@ -146,7 +146,7 @@ void setup() {
   // initialize the Bluetooth
   if(!my_bluetooth.init_bluetooth(btServerAddress))
   {
-    debug("setup:bluetooth init failed");
+    Serial.println("setup: bluetooth init failed");
     return;
   }
 
@@ -155,7 +155,7 @@ void setup() {
 
   // initialize the camera module
   if (init_camera() != ESP_OK) {
-    debug("setup:camera init failed");
+    Serial.println("setup: camera init failed");
     return;
   }
   
@@ -164,7 +164,7 @@ void setup() {
 
   // initialize the SD module
   if(!init_sd_card()) {
-    debug("setup:sd card init failed");
+    Serial.println("setup: sd card init failed");
     return; 
   }
 
@@ -206,12 +206,12 @@ void bt_status_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
   
   switch(event) {
     case ESP_SPP_OPEN_EVT:  // camera is connected to the phone
-      debug("cb: camera connected to phone");
+      Serial.println("cb: camera connected to phone");
       my_bluetooth.set_bt_connection_status(BLUETOOTH_CONNECTED);
       break;
 
     case ESP_SPP_CLOSE_EVT: // camera is disconnected from the phone
-      debug("cb: camera disconnected from phone");
+      Serial.println("cb: camera disconnected from phone");
       my_bluetooth.set_bt_connection_status(BLUETOOTH_DISCONNECTED);
 
     //   Serial.printf("cb: %d\n", param->close.async ? 1 : 0);
@@ -220,35 +220,35 @@ void bt_status_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
       break;
       
     case ESP_SPP_START_EVT: // camera as the Bluetooth server
-      debug("cb: camera as server");
+      Serial.println("cb: camera as server");
       break;
       
     case ESP_SPP_CL_INIT_EVT: // camera started the connection to the phone
-      debug("cb: camera connecting to phone");
+      Serial.println("cb: camera connecting to phone");
       my_bluetooth.set_bt_connection_status(BLUETOOTH_CONNECTING);
       break;
       
     case ESP_SPP_SRV_OPEN_EVT: // camera as server has accepted an incoming connection
-      debug("cb: camera as server has a connection");
+      Serial.println("cb: camera as server has a connection");
       break;
       
    case ESP_SPP_SRV_STOP_EVT: // camera as server has lost a connection
-     debug("cb: camera as server has lost a connection");
+     Serial.println("cb: camera as server has lost a connection");
      break;
       
     case ESP_SPP_DATA_IND_EVT: // data is received over Bluetooth
-      debug("cb: camera has received data on BT");
+      Serial.println("cb: camera has received data on BT");
       Serial.printf("# bytes received %d\n", param->data_ind.len);
       break;
       
     case ESP_SPP_WRITE_EVT: // data write over Bluetooth is completed
-      debug("cb: camera has written data on BT");
+      Serial.println("cb: camera has written data on BT");
       Serial.printf("# bytes written %d\n", param->write.len);
       my_bluetooth_comm.give_data_semaphore();
       break;
       
     case ESP_SPP_CONG_EVT: // congestion status of Bluetooth has changed
-      debug("cb: camera BT congestion status changed");
+      Serial.println("cb: camera BT congestion status changed");
       break;
 
     default:

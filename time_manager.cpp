@@ -8,25 +8,57 @@ ESP32Time rtc;
  * @param: uint64_t seconds elapsed time
  */
 void set_rtc_time(uint64_t epoch_time){
-  rtc.setTimeZone();
-  rtc.setTimeEpoch(epoch_time); // 17th Jan 2021 15:24:30
+  // setting time zone is not working. 
+  // rtc.setTimeZone();
+
+  // let's try to fix this by manually subtracting the number of milliseconds for PST from GMT.
+  // since PST is 8 hours behind GMT we subtract 8 hours worth of milliseconds. Also, during 
+  // during daylight savings, we need to add 1 hour worth of milliseconds which will add another 
+  // requirements of knowing when daylight saving starts and ends. This is left for now.
+  uint64_t timiZoneMillis = 8 * 60 * 60  * 1000;
+  rtc.setTimeEpoch(epoch_time - timiZoneMillis);
 }
 
-void get_rtc_time_as_string() {
-  // return rtc.getTime("%d-%m-%Y:%H-%M-%S");
+/**
+ * Print current RTC time to Serial.
+ */
+void show_current_rtc_time() {
+  struct tm timeinfo = rtc.getTimeStruct();
+	char s[51];
 
+  // long date format.
+	strftime(s, 50, "%A, %B %d %Y %H:%M:%S", &timeinfo);
+  Serial.printf("Current RTC time: %s\n", s);
+
+}
+
+/**
+ * Get current RTC time as string.
+ * @param: const char * to store the time string.
+ */
+void get_rtc_time_as_string(char * buffer) {
+  if(buffer == NULL) {
+    Serial.println("get_rtc_time_as_string: null buffer");
+  }
+
+  // get the time
+  struct tm timeinfo = rtc.getTimeStruct();
+	
+  // long date format.
+	strftime(buffer, 50, "%A_%B_%d_%Y_%H_%M_%S", &timeinfo);
+  return;
+
+  // return rtc.getTime("%d-%m-%Y:%H-%M-%S");
   // Serial.println(rtc.getTime());          //  (String) 15:24:38
   // Serial.println(rtc.getDate());          //  (String) Sun, Jan 17 2021
   // Serial.println(rtc.getDate(true));      //  (String) Sunday, January 17 2021
   // Serial.println(rtc.getDateTime());      //  (String) Sun, Jan 17 2021 15:24:38
-  Serial.println(rtc.getDateTime(true));  //  (String) Sunday, January 17 2021 15:24:38
-
+  // Serial.println(rtc.getDateTime(true));  //  (String) Sunday, January 17 2021 15:24:38
   // Serial.println(rtc.getTimeDate());      //  (String) 15:24:38 Sun, Jan 17 2021
   // Serial.println(rtc.getTimeDate(true));  //  (String) 15:24:38 Sunday, January 17 2021
-
   // Serial.println(rtc.getMicros());        //  (long)    723546
   // Serial.println(rtc.getMillis());        //  (long)    723
-  Serial.println(rtc.getEpoch());         //  (long)    1609459200
+  // Serial.println(rtc.getEpoch());         //  (long)    1609459200
   // Serial.println(rtc.getSecond());        //  (int)     38    (0-59)
   // Serial.println(rtc.getMinute());        //  (int)     24    (0-59)
   // Serial.println(rtc.getHour());          //  (int)     3     (0-12)
@@ -38,19 +70,18 @@ void get_rtc_time_as_string() {
   // Serial.println(rtc.getDayofYear());     //  (int)     16    (0-365)
   // Serial.println(rtc.getMonth());         //  (int)     0     (0-11)
   // Serial.println(rtc.getYear());          //  (int)     2021
-
   // return rtc.getTimeDate(true);
 }
 
-void printLocalTime()
-{
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    Serial.println("Failed to obtain time");
-    return;
-  }
-  Serial.print(&timeinfo, "%A, %B %d %Y %H:%M:%S");//Friday, February 22 2019 22:37:45
-}
+// void printLocalTime()
+// {
+//   struct tm timeinfo;
+//   if (!getLocalTime(&timeinfo)) {
+//     Serial.println("Failed to obtain time");
+//     return;
+//   }
+//   Serial.print(&timeinfo, "%A, %B %d %Y %H:%M:%S");//Friday, February 22 2019 22:37:45
+// }
 
 
 /*

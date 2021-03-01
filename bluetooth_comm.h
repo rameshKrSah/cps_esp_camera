@@ -137,7 +137,7 @@ class BluetoothCommunication {
      * @param: Bluetooth * pointer
      * @return: Boolean
      */
-    bool _send_image_sent_request(Bluetooth * my_bt);
+    bool _send_image_sent_request(Bluetooth * my_bt, const char * file_name);
 
     /**
      * Verify response of a Bluetooth communication.

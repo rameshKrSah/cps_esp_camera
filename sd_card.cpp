@@ -1,5 +1,7 @@
 #include "sd_card.h"
 #include "utils.h"
+#include "time_manager.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -23,13 +25,13 @@ bool init_sd_card() {
  // start SD card and verify for the card.
   debug("init_sd_card: starting SD card");
   if(!SD_MMC.begin()){
-    debug("init_sd_card: sd card mount failed");
+    Serial.println("init_sd_card: sd card mount failed");
     return false;
   }
   
   uint8_t cardType = SD_MMC.cardType();
   if(cardType == CARD_NONE){
-    debug("init_sd_card: no sd card attached");
+    Serial.println("init_sd_card: no sd card attached");
     return false;
   }
 
@@ -40,7 +42,7 @@ bool init_sd_card() {
   // create the MUTEX for SD_MMC access. Errors when two processes uses SD_MMC at once.
   if(_sd_mmc_mutex == NULL){
     _sd_mmc_mutex = xSemaphoreCreateMutex();
-    xSemaphoreGive(_sd_mmc_mutex);
+    // xSemaphoreGive(_sd_mmc_mutex);
   }
   return true;
 }
@@ -85,37 +87,40 @@ void set_4_bytes_eeprom(uint8_t start_address, uint32_t value) {
  */
 bool save_image_to_sd_card(fs::FS &fs, camera_fb_t * fb) {
   if (fb == NULL) {
-    debug("save_image_to_sd_card: null image buffer");
+    Serial.println("save_image_to_sd_card: null image buffer");
     return false;
   }
 
   // we need timestamp as the file name for the image.
-  uint32_t picture_number;
+  // uint32_t picture_number;
       
   // get the last picture number from EEPROM, and increment it for the new picture
   // EEPROM has limit on the number of writes at each location.
-  EEPROM.begin(EEPROM_SIZE);
-  EEPROM.get(0, picture_number);
-  picture_number += 1;
+  // EEPROM.begin(EEPROM_SIZE);
+  // EEPROM.get(0, picture_number);
+  // picture_number += 1;
   
   // Path where new picture will be saved in SD Card
-  String path = "/picture" + String(picture_number) +".jpg";
-  debug("save_image_to_sd_card: file name: ");
-  debug(path.c_str());
+  char current_time[51];
+  show_current_rtc_time();
+  get_rtc_time_as_string(current_time);
+
+  String path = "/" + String(current_time) +".jpg";
+  Serial.printf("save_image_to_sd_card: file name: %s\n", path.c_str());
 
   // get the file object to write the image data to SD card 
   File file = fs.open(path.c_str(), FILE_WRITE);
   
   if(!file){
-    debug("save_image_to_sd_card: failed to open file in writing mode");
+    Serial.println("save_image_to_sd_card: failed to open file");
     return false;
   }
   else {
     file.write(fb->buf, fb->len); // payload (image), payload length
 
     // save the updated picture number into EEPROM
-    EEPROM.put(0, picture_number);
-    EEPROM.commit();
+    // EEPROM.put(0, picture_number);
+    // EEPROM.commit();
   }
 
   // close the file
@@ -227,11 +232,11 @@ void sd_read_file(fs::FS &fs, const char * path){
  * @param: file path (const char *)
  */
 void sd_delete_file(fs::FS &fs, const char * path){
-    Serial.printf("Deleting file: %s\n", path);
+    Serial.printf("sd_delete_file: deleting file: %s\n", path);
     if(fs.remove(path)){
-        Serial.println("File deleted");
+        debug("File deleted");
     } else {
-        Serial.println("Delete failed");
+        Serial.println("sd_delete_file: delete failed");
     }
 }
 

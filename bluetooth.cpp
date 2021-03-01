@@ -24,6 +24,13 @@ Bluetooth::Bluetooth() {
     if(_receive_data_mutex == NULL){
         _receive_data_mutex = xSemaphoreCreateMutex();
     }
+    // xSemaphoreTake(_receive_data_mutex, 0);
+
+    debug("Bluetooth: create the bluetooth serial mutex");
+    if(_bluetooth_serial_mutex == NULL) {
+        _bluetooth_serial_mutex = xSemaphoreCreateMutex();
+    }
+    // xSemaphoreTake(_bluetooth_serial_mutex, 0);
 }
 
 /**
@@ -38,6 +45,9 @@ Bluetooth::~Bluetooth() {
 
     vSemaphoreDelete(_receive_data_mutex);
     _receive_data_mutex = NULL;
+
+    vSemaphoreDelete(_bluetooth_serial_mutex);
+    _bluetooth_serial_mutex = NULL;
 }
 
 /**
@@ -56,7 +66,7 @@ bool Bluetooth::init_bluetooth(uint8_t mac[6]) {
 
     if (!set_server_mac(mac)) {
         // raise an error
-        debug("init_bluetooth: no server MAC");
+        Serial.println("init_bluetooth: no server MAC");
         return false;
     }
 
@@ -67,11 +77,11 @@ bool Bluetooth::init_bluetooth(uint8_t mac[6]) {
 
     // check if we are connected or not. if not try again.
    if(status) {
-       debug("init_bluetooth: connected");
+       Serial.println("init_bluetooth: connected");
        return true;
    }else {
        while(!_bt_serial.connected(1000)) {
-           debug("init_bluetooth: failed to connect"); 
+           Serial.println("init_bluetooth: failed to connect"); 
        }
    }
     
@@ -146,7 +156,7 @@ int Bluetooth::bt_write_data(const uint8_t * buff, int len) {
   }
 
   // if not return failed status
-  debug("bt_write_data: failed");
+  Serial.println("bt_write_data: failed");
   return STATUS_NOT_OK;
 }
 
@@ -189,7 +199,7 @@ bool Bluetooth::take_rcv_data_semaphore() {
         return true;
     }
 
-    debug("take_rcv_data_semaphore: failed");
+    Serial.println("take_rcv_data_semaphore: failed");
     return false;
 }
 
@@ -197,7 +207,7 @@ bool Bluetooth::take_rcv_data_semaphore() {
  * Release the receive data mutex.
  */
 void Bluetooth::give_rcv_data_mutex(){
-    debug("give_rcv_data_mutex");
+    // debug("give_rcv_data_mutex");
     xSemaphoreGive(_receive_data_mutex);
 }
 
@@ -215,7 +225,7 @@ void Bluetooth::copy_received_data(const uint8_t * buff, uint16_t len) {
 
     // give the Semaphore for any process waiting on the receive data.
     xSemaphoreGive(_receive_data_Semaphore);
-    debug("copy_received_data: mutex released, and semaphore given");
+    // debug("copy_received_data: mutex released, and semaphore given");
 }
 
 /**
@@ -233,4 +243,19 @@ uint8_t * Bluetooth::get_recv_buffer() {
  */
 uint16_t Bluetooth::get_recv_buffer_length() {
     return _receive_length;
+}
+
+/**
+ * Take the Bluetooth serial mutex. We need this for sequential operation of the Bluetooth.
+ * When one operation is going on with the Bluetooth, another operation must wait untils it finishes.
+ */
+void Bluetooth::take_bluetooth_serial_mutex() {
+    xSemaphoreTake(_bluetooth_serial_mutex, portMAX_DELAY);
+}
+
+/**
+ * Release the Bluetooth serial mutex.
+ */
+void Bluetooth::release_bluetooth_serial_mutex() {
+    xSemaphoreGive(_bluetooth_serial_mutex);
 }

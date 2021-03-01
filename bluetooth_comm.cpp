@@ -60,6 +60,7 @@ BluetoothCommunication::~BluetoothCommunication(){
     _data_written_semaphore = NULL;
 }
 
+
 /**
  * Get response type name.
  * @param: uint8_t response_type_enum
@@ -127,6 +128,7 @@ bool BluetoothCommunication::_verify_response(Bluetooth * my_bt, uint8_t comm_ty
         free(rcv_data);
     }
 
+    debug("\n\n");
     return status;
 }
 
@@ -229,12 +231,12 @@ void BluetoothCommunication::_create_packet(_bluetooth_comm_type comm_type, uint
     // set the payload length
     *(_packet_buffer + _packet_length) = (uint16_t)payload_len;
     _packet_length += 2;
-    Serial.printf("_create_packet: payload length %d\n", payload_len);
+    // Serial.printf("_create_packet: payload length %d\n", payload_len);
     
     // packet_number is set by the calling function and is member of the class
     *(_packet_buffer + _packet_length) = (uint16_t)_packet_number;
     _packet_length += 2;
-    Serial.printf("_create_packet: packet number %d\n", _packet_number);
+    // Serial.printf("_create_packet: packet number %d\n", _packet_number);
         
     // Payload is already in the buffer, just increment the payload length
     if (payload != NULL) {
@@ -307,14 +309,14 @@ bool BluetoothCommunication::_send_are_you_ready_request(Bluetooth * my_bt){
  * @param: Bluetooth * pointer
  * @return: Boolean
  */
-bool BluetoothCommunication::_send_image_sent_request(Bluetooth * my_bt) {
+bool BluetoothCommunication::_send_image_sent_request(Bluetooth * my_bt, const char * file_name) {
     bool status = false;
 
     // set the packet number
     _packet_number = 1;
     
     // send the are you ready request and verify the response.
-    status |= _send_data(my_bt, BT_REQUEST, IMAGE_SENT_REQUEST, (uint8_t *)_image_sent_request, strlen(_image_sent_request), true);
+    status |= _send_data(my_bt, BT_REQUEST, IMAGE_SENT_REQUEST, (uint8_t *)file_name, strlen(file_name), true);
     if(status) {
         // request is sent, response is received, now verify the response.
         status = _verify_response(my_bt, BT_RESPONSE, (uint8_t)RESPONSE_FOR_IMAGE_SENT_REQUEST);
@@ -344,7 +346,7 @@ bool BluetoothCommunication::_image_transfer_confirmation(Bluetooth * my_bt){
 
     // check if the camera is connected to phone or not.
     if(my_bt->get_bt_connection_status() != BLUETOOTH_CONNECTED) {
-        debug("_image_transfer_confirmation: bt disconnected");
+        Serial.println("_image_transfer_confirmation: bt disconnected");
         return status;
     }
 
@@ -353,10 +355,10 @@ bool BluetoothCommunication::_image_transfer_confirmation(Bluetooth * my_bt){
     if(status) {
         status = _send_are_you_ready_request(my_bt);
         if(!status) {
-            debug("_image_transfer_confirmation: failed at are you ready request");
+            Serial.println("_image_transfer_confirmation: failed at are you ready request");
         }
     } else {
-        debug("_image_transfer_confirmation: failed at image incoming request");
+        Serial.println("_image_transfer_confirmation: failed at image incoming request");
     }
 
     return status;
@@ -402,8 +404,12 @@ bool BluetoothCommunication::send_next_image(Bluetooth * my_bt, fs::FS &fs){
         return status;
     }
 
-    // open the next file in the directory
+    // open the next file in the directory :: mechanism to check if there is any file or not.
     File my_file = root_dir.openNextFile();
+    // if(!my_file.isDirectory() && my_file.size() == 0) {
+
+    // }
+
     while(my_file){
         if(!my_file.isDirectory()){
             debug("send_next_image:  FILE: ");
@@ -417,15 +423,22 @@ bool BluetoothCommunication::send_next_image(Bluetooth * my_bt, fs::FS &fs){
 
     // now we have an image, start the Image transfer procedure.
     if(_image_transfer_confirmation(my_bt)) {
-        Serial.println("send_next_image: image transfer verified, sending image now...");
+        debug("send_next_image: image transfer verified, sending image now...");
         
         // send the image file
         status = send_data_file(my_bt, IMAGE_DATA, &my_file);
         
         // send the image sent request
-        status  = _send_image_sent_request(my_bt);
+        if(status) {
+            delay(100);
+            status  = _send_image_sent_request(my_bt, my_file.name());
+        }
         
-        // after the file is sent, delete it from SD card.
+        if(status) {
+            // after the file is sent, delete it from SD card.
+            // String path = String(my_file.name()) +".jpg";
+            sd_delete_file(fs, my_file.name());
+        }
     }
 
     // close the file
@@ -477,14 +490,18 @@ bool BluetoothCommunication::send_data_file(Bluetooth * my_bt, _bluetooth_data_t
     while(my_file->available()){
         // read bytes from the file
         read_size = my_file->read(_packet_buffer + _PREAMBLE_SIZE, _PAYLOAD_SPACE);
+        if(read_size == 0) {
+            Serial.println("send_data_file: error reading file");
+            break;
+        }
 
-        Serial.printf("size %d, position %d, packet number %d\n", my_file->size(), my_file->position(), _packet_number);
-        Serial.printf("read %d bytes from file\n", read_size);
+        // Serial.printf("size %d, position %d, packet number %d\n", my_file->size(), my_file->position(), _packet_number);
 
         // send the read bytes to phone
+        Serial.printf("send_data_file: read %d bytes\n", read_size);
         status = _send_data(my_bt, BT_DATA, (uint8_t)data_type, NULL, read_size, true);
         if(!status) {
-            Serial.println("send_data_file: tx failed");
+            Serial.printf("send_data_file: tx failed, packet number %d\n", _packet_number);
             break;
         }
 
@@ -525,7 +542,7 @@ bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type c
 
     // First we need to check if we have the connection
     if(my_bt->get_bt_connection_status() != BLUETOOTH_CONNECTED) {
-        debug("send_data: bt disconnected");
+        Serial.println("send_data: bt disconnected");
         return status;
     }
 
@@ -541,9 +558,9 @@ bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type c
         // we need to divide data into several packets.
         while(total_data_length != 0){
             // keep sending until we reach the end of the data buffer
-            Serial.printf("sending packet number %d\n", _packet_number);
+            // Serial.printf("sending packet number %d\n", _packet_number);
             sending_bytes = end - start;
-            Serial.printf("start: %d, end: %d, # bytes %d\n", start, end, sending_bytes);
+            // Serial.printf("start: %d, end: %d, # bytes %d\n", start, end, sending_bytes);
 
             // copy the data into the buffer
             memcpy(_packet_buffer + _PREAMBLE_SIZE, data_ptr + start, sending_bytes);
@@ -556,10 +573,10 @@ bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type c
                 _packet_number += 1;
             } else {
                 // failed to send data, break free.
+                Serial.printf("send_data: tx failed at packet number %d\n", _packet_number);
                break;
             }
         }
-
         Serial.printf("send_data: out of %d bytes, %d sent\n", data_length, end);
     } else {
         // copy the data into the buffer
@@ -579,7 +596,7 @@ bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type c
 bool BluetoothCommunication::request_for_time(Bluetooth * my_bt){
     bool status = false;
 
-    // get_rtc_time_as_string();
+    show_current_rtc_time();
     status = _send_data(my_bt, BT_REQUEST, TIME_REQUEST, (uint8_t *)_time_request, strlen(_time_request), true);
     if(status) {    
         uint8_t * rcv_data;
@@ -589,7 +606,7 @@ bool BluetoothCommunication::request_for_time(Bluetooth * my_bt){
         // allocate space to copy the response
         rcv_data = (uint8_t *) malloc(rcv_length * sizeof(uint8_t));
         if (rcv_data == NULL) {
-            debug("request_for_time: failed to allocate memory");
+            Serial.println("request_for_time: failed to allocate memory");
             return false;
         }
 
@@ -605,13 +622,13 @@ bool BluetoothCommunication::request_for_time(Bluetooth * my_bt){
 
             uint64_t time_in_millis;
             memcpy(&time_in_millis, &rcv_data[_PREAMBLE_SIZE], 8);
-            // Serial.printf("%llu\n", time_in_millis);
+            Serial.printf("request_for_time: epoch time in millis: %llu\n", time_in_millis);
             // Serial.printf("%d\n", time_in_millis);
             
             // set the current timestamp
             set_rtc_time(time_in_millis);
         } else {
-            debug("request_for_time: invalid response");
+            Serial.println("request_for_time: invalid response");
             status = false;
         }
         
@@ -619,7 +636,8 @@ bool BluetoothCommunication::request_for_time(Bluetooth * my_bt){
         if (rcv_data != NULL) {
             free(rcv_data);
         }
-        // get_rtc_time_as_string();
+
+        show_current_rtc_time();
     }
 
     return status;

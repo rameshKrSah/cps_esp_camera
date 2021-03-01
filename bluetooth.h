@@ -38,6 +38,7 @@ class Bluetooth {
 
     SemaphoreHandle_t _receive_data_Semaphore = NULL;
     SemaphoreHandle_t _receive_data_mutex = NULL;
+    SemaphoreHandle_t _bluetooth_serial_mutex = NULL;
 
     const char * _bluetooth_status_as_string(_bluetooth_status_ st);
 
@@ -128,6 +129,17 @@ class Bluetooth {
      * @return uint16_t
      */
     uint16_t get_recv_buffer_length();
+
+    /**
+     * Take the Bluetooth serial mutex. We need this for sequential operation of the Bluetooth.
+     * When one operation is going on with the Bluetooth, another operation must wait untils it finishes.
+     */
+    void take_bluetooth_serial_mutex();
+
+    /**
+     * Release the Bluetooth serial mutex.
+     */
+    void release_bluetooth_serial_mutex();
 };
 
 

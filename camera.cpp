@@ -56,13 +56,13 @@ camera_fb_t * take_picture() {
 
   // get the pointer to the camera frame buffer which has the content of latest photo
   fb = esp_camera_fb_get();  
-  if(!fb) {
-    debug("take_picture: failed, trying again");
-    fb = esp_camera_fb_get();
     if(!fb) {
-      debug("take_picture: capture failed again");
-      return NULL;
-    }
+      Serial.println("take_picture: failed, trying again");
+      fb = esp_camera_fb_get();
+      if(!fb) {
+        Serial.println("take_picture: capture failed again");
+        return NULL;
+      }
   }
   return fb;
 }
@@ -72,8 +72,8 @@ camera_fb_t * take_picture() {
  * Turn off the camer flash.
  */
 void turn_off_camera_flash(){
-    pinMode(4, INPUT);
-    digitalWrite(4, LOW);
-    rtc_gpio_hold_dis(GPIO_NUM_4);
+  pinMode(4, INPUT);
+  digitalWrite(4, LOW);
+  rtc_gpio_hold_dis(GPIO_NUM_4);
 }
 

@@ -42,9 +42,6 @@ uint8_t btServerAddress[6] = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E};
 // Deep sleep semaphore
 static SemaphoreHandle_t deep_sleep_semaphore = NULL;
 
-// File operation 
-// File root_dir;
-
 /**
  * We will have two tasks. 
  * 1. One task to take pictures and save the pictures to SD card. 
@@ -60,16 +57,22 @@ static SemaphoreHandle_t deep_sleep_semaphore = NULL;
 void camera_task(void * params) {
   debug("camera task started!");
 
+  // before taking picture, ask the phone for the current time.
+  // we need this for the name of image.
+  my_bluetooth.take_bluetooth_serial_mutex(); 
+  my_bluetooth_comm.request_for_time(&my_bluetooth);
+  my_bluetooth.release_bluetooth_serial_mutex();
+
   // strucutre that holds the camera data
   camera_fb_t * fb = NULL;
   fb = take_picture();
-  Serial.printf("camera_task:camera buf len %d\n", fb->len);
+  Serial.printf("camera_task: camera buf len %d\n", fb->len);
   
   // if we have a picture, try to store it in the SD card.
   acquire_sd_mmc();
-  // if(!save_image_to_sd_card(SD_MMC, fb)) {
-  //   debug("camera_task:failed to save image to card");
-  // }
+  if(!save_image_to_sd_card(SD_MMC, fb)) {
+    debug("camera_task: failed to save image to card");
+  }
   release_sd_mmc();
 
   // return the frame buffer back to the driver for reuse
@@ -81,7 +84,7 @@ void camera_task(void * params) {
   for(;;) {
     // wait for the semaphore for deep sleep
     if(xSemaphoreTake(deep_sleep_semaphore, portMAX_DELAY) == pdTRUE){
-      Serial.println("camera_task:obtained sleep semaphore. going to sleep....");
+      Serial.println("camera_task: obtained sleep semaphore. going to sleep....");
       
       // go to deep sleep
       go_to_deep_sleep(TIME_TO_SLEEP);
@@ -102,27 +105,21 @@ void bluetooth_task(void * params) {
       my_bluetooth.bt_reconnect();
     }
 
-    my_bluetooth_comm.request_for_time(&my_bluetooth);
-
-    delay(500);
-
-    // send the data untill done or transmit fixed number of images.
+    // // send the data untill done or transmit fixed number of images.
     acquire_sd_mmc();
+    my_bluetooth.take_bluetooth_serial_mutex();
     my_bluetooth_comm.send_next_image(&my_bluetooth, SD_MMC);
+    my_bluetooth.release_bluetooth_serial_mutex();
     release_sd_mmc();
 
     go_to_deep_sleep(300);
 
-    // if(sd_get_next_file(SD_MMC, "/", &my_file)){
-    //   my_bluetooth_comm.send_data_file(&my_bluetooth, IMAGE_DATA, &my_file);
-    // }
-
     // give the Semaphore so that the camera can be put to sleep.
-    // xSemaphoreGive(deep_sleep_semaphore);
+    xSemaphoreGive(deep_sleep_semaphore);
 
     // delete the task.
-    // debug("bluetooth_task:deleting bluetooth task");
-    // vTaskDelete(NULL);
+    Serial.println("bluetooth_task: deleting bluetooth task");
+    vTaskDelete(NULL);
   }
 }
 
@@ -136,9 +133,9 @@ void setup() {
   // Start the serial communication
   if(DEBUG) {
     Serial.begin(115200);
-    Serial.setDebugOutput(true);
+    // Serial.setDebugOutput(true);
   }
-  debug("setup:configuring services");
+  debug("setup: configuring services");
 
   // register Bluetooth callback for status update
   my_bluetooth.set_status_callback(bt_status_callback);   // THIS NEEDS TO BE HERE FOR PROPER CALLBACKS
@@ -175,7 +172,7 @@ void setup() {
   }
 
   // Schedule the tasks. 
-  // xTaskCreate(camera_task, "take pictue and save to sd card", 4096, NULL, 1, NULL);
+  // xTaskCreate(camera_task, "take pictue and save to sd card", 4096, NULL, 5, NULL);
   xTaskCreate(bluetooth_task, "connect to phone and send data", 4096, NULL, 1, NULL);
 }
 
@@ -192,7 +189,7 @@ void loop() {
 void bt_data_received_callback(const uint8_t * buff, size_t len) {
     uint8_t totalBytes = int(len);
     if((buff != NULL) && (totalBytes > 0)){
-      Serial.printf("bt_data_received_callback:data length: %d\n", totalBytes);
+      Serial.printf("bt_data_received_callback: data length: %d\n", totalBytes);
       my_bluetooth.copy_received_data(buff, totalBytes);
     }
 }
@@ -237,13 +234,13 @@ void bt_status_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
      break;
       
     case ESP_SPP_DATA_IND_EVT: // data is received over Bluetooth
-      Serial.println("cb: camera has received data on BT");
-      Serial.printf("# bytes received %d\n", param->data_ind.len);
+      Serial.printf("\ncb: camera has received data on BT %d\n", param->data_ind.len);
+      // Serial.printf("# bytes received %d\n", param->data_ind.len);
       break;
       
     case ESP_SPP_WRITE_EVT: // data write over Bluetooth is completed
-      Serial.println("cb: camera has written data on BT");
-      Serial.printf("# bytes written %d\n", param->write.len);
+      Serial.printf("cb: camera has written data on BT %d\n", param->write.len);
+      // Serial.printf("# bytes written %d\n", param->write.len);
       my_bluetooth_comm.give_data_semaphore();
       break;
       

@@ -4,11 +4,19 @@
 #include "Arduino.h"
 #include <ESP32Time.h>
 #include <stdint.h>
+#include "time.h"
+#include <sys/time.h>
 
 /**
- * Get RTC time as string in the format "%d-%m-%Y:%H-%M-%S"
+ * Print current RTC time to Serial.
  */
-void get_rtc_time_as_string();
+void show_current_rtc_time();
+
+/**
+ * Get current RTC time as string.
+ * @param: char * to store the time string.
+ */
+void get_rtc_time_as_string(char * buffer);
 
 /**
  * Set the RTC time using the epoch time.

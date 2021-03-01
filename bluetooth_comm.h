@@ -75,7 +75,6 @@ class BluetoothCommunication {
     uint16_t _packet_length = 0;
     uint8_t _packet_buffer[MAX_LENGTH + 1];
 
-
     /**
      * Create the packet to be sent over Bluetooth.
      * @param: _bluetooth_comm_type comm_type
@@ -169,13 +168,12 @@ class BluetoothCommunication {
     /**
      * Send the content of the file over Bluetooth. 
      * @param: Bluetooth object pointer
-     * @param: Bluetooth communication type
-     * @param: Bluetooth communication category
+     * @param: Bluetooth data category
      * @param: FILE object pointer
      * 
      * @return: boolean
      */
-    bool send_data_file(Bluetooth * my_bt, _bluetooth_comm_type comm_type, uint8_t category, File * my_file);
+    bool send_data_file(Bluetooth * my_bt, _bluetooth_data_type data_type, File * my_file);
 
     /**
      * Send next image from the SD card to phone.

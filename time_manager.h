@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "time.h"
 #include <sys/time.h>
+#include "utils.h"
 
 /**
  * Print current RTC time to Serial.

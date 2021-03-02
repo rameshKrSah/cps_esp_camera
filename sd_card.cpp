@@ -90,15 +90,6 @@ bool save_image_to_sd_card(fs::FS &fs, camera_fb_t * fb) {
     Serial.println("save_image_to_sd_card: null image buffer");
     return false;
   }
-
-  // we need timestamp as the file name for the image.
-  // uint32_t picture_number;
-      
-  // get the last picture number from EEPROM, and increment it for the new picture
-  // EEPROM has limit on the number of writes at each location.
-  // EEPROM.begin(EEPROM_SIZE);
-  // EEPROM.get(0, picture_number);
-  // picture_number += 1;
   
   // Path where new picture will be saved in SD Card
   char current_time[51];
@@ -117,10 +108,7 @@ bool save_image_to_sd_card(fs::FS &fs, camera_fb_t * fb) {
   }
   else {
     file.write(fb->buf, fb->len); // payload (image), payload length
-
-    // save the updated picture number into EEPROM
-    // EEPROM.put(0, picture_number);
-    // EEPROM.commit();
+    Serial.println("save_image_to_sd_card: image saved");
   }
 
   // close the file

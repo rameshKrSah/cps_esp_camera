@@ -406,9 +406,6 @@ bool BluetoothCommunication::send_next_image(Bluetooth * my_bt, fs::FS &fs){
 
     // open the next file in the directory :: mechanism to check if there is any file or not.
     File my_file = root_dir.openNextFile();
-    // if(!my_file.isDirectory() && my_file.size() == 0) {
-
-    // }
 
     while(my_file){
         if(!my_file.isDirectory()){
@@ -419,6 +416,11 @@ bool BluetoothCommunication::send_next_image(Bluetooth * my_bt, fs::FS &fs){
             break;
         }
         my_file = root_dir.openNextFile();
+    }
+
+    if(my_file.size() == 0) {
+        // no need to proceed, because there is no file in the SD card to send.
+        return status;
     }
 
     // now we have an image, start the Image transfer procedure.
@@ -436,7 +438,7 @@ bool BluetoothCommunication::send_next_image(Bluetooth * my_bt, fs::FS &fs){
         
         if(status) {
             // after the file is sent, delete it from SD card.
-            // String path = String(my_file.name()) +".jpg";
+            Serial.printf("send_next_image: image file: %s sent\n", my_file.name());
             sd_delete_file(fs, my_file.name());
         }
     }

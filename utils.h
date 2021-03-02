@@ -13,7 +13,7 @@
 #include "freertos/task.h"
 
 
-#define DEBUG true
+#define DEBUG false
 #define STATUS_OK 1
 #define STATUS_NOT_OK 0
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */

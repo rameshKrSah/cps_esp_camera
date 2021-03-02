@@ -17,6 +17,7 @@ void set_rtc_time(uint64_t epoch_time){
   // requirements of knowing when daylight saving starts and ends. This is left for now.
   uint64_t timiZoneMillis = 8 * 60 * 60  * 1000;
   rtc.setTimeEpoch(epoch_time - timiZoneMillis);
+  debug("set_rtc_time: RTC time updated");
 }
 
 /**

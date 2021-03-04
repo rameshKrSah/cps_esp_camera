@@ -37,7 +37,8 @@ Bluetooth my_bluetooth;
 BluetoothCommunication my_bluetooth_comm;
 
 // Phone Bluetooth MAC address.
-uint8_t btServerAddress[6] = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E};
+// uint8_t btServerAddress[6] = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E}; // galaxy
+uint8_t btServerAddress[6] = {0x64, 0xa2, 0xf9, 0x3e, 0x95, 0x9d};
 
 // Deep sleep semaphore
 static SemaphoreHandle_t deep_sleep_semaphore = NULL;
@@ -55,9 +56,7 @@ static SemaphoreHandle_t deep_sleep_semaphore = NULL;
  * Task to take pictures and save the pictures in the SD card
  */
 void camera_task(void * params) {
-  debug("camera task started!");
-  // Turn off the on board LED
-  turn_off_camera_flash();
+  debug("camera task started!")
 
   // before taking picture, ask the phone for the current time.
   // we need this for the name of image.
@@ -69,9 +68,6 @@ void camera_task(void * params) {
   camera_fb_t * fb = NULL;
   fb = take_picture();
   Serial.printf("camera_task: camera buf len %d\n", fb->len);
-  
-  // Turn off the on board LED
-  turn_off_camera_flash();
 
   // if we have a picture, try to store it in the SD card.
   acquire_sd_mmc();
@@ -87,7 +83,7 @@ void camera_task(void * params) {
     // wait for the semaphore for deep sleep
     if(xSemaphoreTake(deep_sleep_semaphore, portMAX_DELAY) == pdTRUE){
       Serial.println("camera_task: obtained sleep semaphore. going to sleep....");
-      
+
       // go to deep sleep
       go_to_deep_sleep(TIME_TO_SLEEP);
     }
@@ -125,58 +121,6 @@ void bluetooth_task(void * params) {
   }
 }
 
-void picture_part(){
-
-  // before taking picture, ask the phone for the current time.
-  // we need this for the name of image.
-  my_bluetooth.take_bluetooth_serial_mutex(); 
-  my_bluetooth_comm.request_for_time(&my_bluetooth);
-  my_bluetooth.release_bluetooth_serial_mutex();
-
-  // strucutre that holds the camera data
-  camera_fb_t * fb = NULL;
-  fb = take_picture();
-  Serial.printf("camera_task: camera buf len %d\n", fb->len);
-  
-  // if we have a picture, try to store it in the SD card.
-  acquire_sd_mmc();
-  if(!save_image_to_sd_card(SD_MMC, fb)) {
-    Serial.println("camera_task: failed to save image to card");
-  }
-  release_sd_mmc();
-
-  // return the frame buffer back to the driver for reuse
-  esp_camera_fb_return(fb);
-
-  // Turn off the on board LED
-  turn_off_camera_flash();
-}
-
-void bluetooth_part() {
-  // check whether we have connection or not
-  if(my_bluetooth.get_bt_connection_status() != BLUETOOTH_CONNECTED) {
-    my_bluetooth.bt_reconnect();
-  }
-
-  // send the data untill done or transmit fixed number of images.
-  acquire_sd_mmc();
-  my_bluetooth.take_bluetooth_serial_mutex();
-  my_bluetooth_comm.send_next_image(&my_bluetooth, SD_MMC);
-  my_bluetooth.release_bluetooth_serial_mutex();
-  release_sd_mmc();
-
-}
-
-void main_task(void * params) {
-  picture_part();
-
-  delay(100);
-
-  bluetooth_part();
-
-  // go to sleep
-  go_to_deep_sleep(TIME_TO_SLEEP);
-}
 
 // Setup Part
 void setup() {
@@ -224,7 +168,7 @@ void setup() {
   }
 
   // Schedule the tasks. 
-  xTaskCreate(camera_task, "take pictue and save to sd card", 4096, NULL, 2, NULL);
+  xTaskCreate(camera_task, "take pictue and save to sd card", 4096, NULL, 5, NULL);
   xTaskCreate(bluetooth_task, "connect to phone and send data", 4096, NULL, 1, NULL);
   // xTaskCreate(main_task, "task to take pic, save, and transmit", 8182, NULL, 1, NULL);
 }

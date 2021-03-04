@@ -34,6 +34,20 @@ void show_current_rtc_time() {
 }
 
 /**
+ * Get current RTC epoch time as a string.
+ * @param: const char * of length 50
+ */
+void get_rtc_epoch_time_as_string(char * buffer) {
+  if(buffer == NULL) {
+    Serial.println("get_rtc_epoch_time_as_string: null buffer");
+  }
+
+  long epoch_time = rtc.getEpoch();
+  snprintf(buffer, 50, "%llu", epoch_time);
+  return;
+}
+
+/**
  * Get current RTC time as string.
  * @param: const char * to store the time string.
  */

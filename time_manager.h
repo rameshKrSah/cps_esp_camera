@@ -25,5 +25,10 @@ void get_rtc_time_as_string(char * buffer);
  */
 void set_rtc_time(uint64_t epoch_time);
 
+/**
+ * Get current RTC epoch time as a string.
+ * @param: const char * of length 50
+ */
+void get_rtc_epoch_time_as_string(char * buffer);
 
 #endif

@@ -72,8 +72,9 @@ camera_fb_t * take_picture() {
  * Turn off the camer flash.
  */
 void turn_off_camera_flash(){
-  pinMode(4, INPUT);
+  pinMode(4, OUTPUT);
   digitalWrite(4, LOW);
-  rtc_gpio_hold_dis(GPIO_NUM_4);
+  rtc_gpio_hold_en(GPIO_NUM_4);
+  gpio_deep_sleep_hold_en();
 }
 

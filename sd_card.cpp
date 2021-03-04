@@ -24,7 +24,7 @@ static SemaphoreHandle_t _sd_mmc_mutex = NULL;
 bool init_sd_card() {
  // start SD card and verify for the card.
   debug("init_sd_card: starting SD card");
-  if(!SD_MMC.begin()){
+  if(!SD_MMC.begin("/sdcard", true)){
     Serial.println("init_sd_card: sd card mount failed");
     return false;
   }
@@ -94,7 +94,7 @@ bool save_image_to_sd_card(fs::FS &fs, camera_fb_t * fb) {
   // Path where new picture will be saved in SD Card
   char current_time[51];
   show_current_rtc_time();
-  get_rtc_time_as_string(current_time);
+  get_rtc_epoch_time_as_string(current_time);
 
   String path = "/" + String(current_time) +".jpg";
   Serial.printf("save_image_to_sd_card: file name: %s\n", path.c_str());

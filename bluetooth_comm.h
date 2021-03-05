@@ -157,13 +157,15 @@ class BluetoothCommunication {
      * receive the response.
      * 
      * @param Bluetooth object pointer
-     * @param bluetooth_comm_data_type data type enum
+     * @param _bluetooth_comm_type communication type
+     * @param category Communication category
      * @param uint8_t * pointer to the data array
      * @param uint16_t data length
      * 
      * @return boolean.
      */
-    bool send_data(Bluetooth * my_bt, _bluetooth_comm_type comm_type, const uint8_t * data_ptr, uint16_t data_length);
+    bool send_data(Bluetooth * my_bt, _bluetooth_comm_type comm_type, uint8_t category,
+        const uint8_t * data_ptr, uint16_t data_length);
 
     /**
      * Send the content of the file over Bluetooth. 

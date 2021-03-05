@@ -29,7 +29,7 @@
 #include "bluetooth_comm.h"
 #include "time_manager.h"
 
-#define TIME_TO_SLEEP  300        /* Time ESP32 will go to sleep (in seconds) */
+#define TIME_TO_SLEEP  180        /* Time ESP32 will go to sleep (in seconds) */
 
 
 // Variable for the Bluetooth
@@ -56,7 +56,7 @@ static SemaphoreHandle_t deep_sleep_semaphore = NULL;
  * Task to take pictures and save the pictures in the SD card
  */
 void camera_task(void * params) {
-  debug("camera task started!")
+  debug("camera task started!");
 
   // before taking picture, ask the phone for the current time.
   // we need this for the name of image.
@@ -110,8 +110,6 @@ void bluetooth_task(void * params) {
     my_bluetooth.release_bluetooth_serial_mutex();
     release_sd_mmc();
 
-    // go_to_deep_sleep(300);
-
     // give the Semaphore so that the camera can be put to sleep.
     xSemaphoreGive(deep_sleep_semaphore);
 
@@ -140,7 +138,8 @@ void setup() {
   if(!my_bluetooth.init_bluetooth(btServerAddress))
   {
     Serial.println("setup: bluetooth init failed");
-    return;
+    // go to deep sleep
+    go_to_deep_sleep(TIME_TO_SLEEP);
   }
 
   // register the bluetooth callback for on receive 
@@ -149,7 +148,8 @@ void setup() {
   // initialize the camera module
   if (init_camera() != ESP_OK) {
     Serial.println("setup: camera init failed");
-    return;
+    // go to deep sleep
+    go_to_deep_sleep(TIME_TO_SLEEP);
   }
   
   // Turn off the on board LED
@@ -158,7 +158,8 @@ void setup() {
   // initialize the SD module
   if(!init_sd_card()) {
     Serial.println("setup: sd card init failed");
-    return; 
+    // go to deep sleep
+    go_to_deep_sleep(TIME_TO_SLEEP);
   }
 
   // create the deep sleep semaphore
@@ -176,7 +177,10 @@ void setup() {
 
 // Loop part of the code. 
 void loop() {
-  delay(portMAX_DELAY);
+  // uint8_t buffer [1024];
+  // my_bluetooth_comm.send_data(&my_bluetooth, BT_RESPONSE, RESPONSE_FOR_OTHER_DATA, buffer, 1024);
+  // Serial.println("\n\n********************************\n\n");
+  // delay(1000 * 30);
 }
 
 

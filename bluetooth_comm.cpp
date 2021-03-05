@@ -116,8 +116,8 @@ bool BluetoothCommunication::_verify_response(Bluetooth * my_bt, uint8_t comm_ty
     my_bt->give_rcv_data_mutex();
 
     if(rcv_data[0] == comm_type && rcv_data[1] == check_category){
-        status = true;
         Serial.printf("_verify_response: response: %s\n", &rcv_data[_PREAMBLE_SIZE]);
+        status = true;
     } else {
         Serial.printf("_verify_response: response error for %s\n", _get_response_type_name(check_category));
         status  = false;
@@ -229,14 +229,24 @@ void BluetoothCommunication::_create_packet(_bluetooth_comm_type comm_type, uint
     _packet_length += 1;
     
     // set the payload length
-    *(_packet_buffer + _packet_length) = (uint16_t)payload_len;
+    Serial.printf("_create_packet: payload length %d\n", payload_len);
+    Serial.printf("_create_packet: payload length %d --- %d\n", (uint8_t)((payload_len >> 8) & 0xFF), (uint8_t)(payload_len & 0xFF));
+    Serial.printf("_create_packet: payload length 0x%X --- 0x%X\n", (uint8_t)((payload_len >> 8) & 0xFF), (uint8_t)(payload_len & 0xFF));
+    *(_packet_buffer + _packet_length) = (uint8_t)(payload_len & 0xFF);
+    *(_packet_buffer + _packet_length + 1) = (uint8_t)((payload_len >> 8) & 0xFF);
+    Serial.printf("_create_packet: 0x%X ------- 0x%X\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
+    Serial.printf("_create_packet: %d ------- %d\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
     _packet_length += 2;
-    // Serial.printf("_create_packet: payload length %d\n", payload_len);
     
     // packet_number is set by the calling function and is member of the class
-    *(_packet_buffer + _packet_length) = (uint16_t)_packet_number;
+    Serial.printf("_create_packet: packet number %d\n", _packet_number);
+    Serial.printf("_create_packet: packet number %d --- %d\n", (uint8_t)((_packet_number >> 8) & 0xFF), (uint8_t)(_packet_number & 0xFF));
+    Serial.printf("_create_packet: packet number 0x%X --- 0x%X\n", (uint8_t)((_packet_number >> 8) & 0xFF), (uint8_t)(_packet_number & 0xFF));
+    *(_packet_buffer + _packet_length) = (uint8_t)(_packet_number & 0xFF);
+    *(_packet_buffer + _packet_length + 1) = (uint8_t)((_packet_number >> 8) & 0xFF);
+    Serial.printf("_create_packet: 0x%X ------- 0x%X\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
+    Serial.printf("_create_packet: %d ------- %d\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
     _packet_length += 2;
-    // Serial.printf("_create_packet: packet number %d\n", _packet_number);
         
     // Payload is already in the buffer, just increment the payload length
     if (payload != NULL) {
@@ -497,8 +507,6 @@ bool BluetoothCommunication::send_data_file(Bluetooth * my_bt, _bluetooth_data_t
             break;
         }
 
-        // Serial.printf("size %d, position %d, packet number %d\n", my_file->size(), my_file->position(), _packet_number);
-
         // send the read bytes to phone
         Serial.printf("send_data_file: read %d bytes\n", read_size);
         status = _send_data(my_bt, BT_DATA, (uint8_t)data_type, NULL, read_size, true);
@@ -530,13 +538,14 @@ bool BluetoothCommunication::send_data_file(Bluetooth * my_bt, _bluetooth_data_t
  * receive the response.
  * 
  * @param Bluetooth object pointer
- * @param Bluetooth communication type
+ * @param _bluetooth_comm_type communication type
+ * @param category Communication category
  * @param uint8_t * pointer to the data array
  * @param uint16_t data length
  * 
  * @return boolean.
  */
-bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type comm_type, 
+bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type comm_type, uint8_t category,
     const uint8_t * data_ptr, uint16_t data_length) {
 
     bool status = false;
@@ -549,7 +558,7 @@ bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type c
     }
 
     // set the packet number to zero
-    _packet_number = 1;
+    _packet_number = 255;
 
     // check the length, send the data, and receive response
     if (data_length > _PAYLOAD_SPACE) {
@@ -566,7 +575,7 @@ bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type c
 
             // copy the data into the buffer
             memcpy(_packet_buffer + _PREAMBLE_SIZE, data_ptr + start, sending_bytes);
-            // status = _send_data(my_bt, comm_type, NULL, sending_bytes, true);
+            status = _send_data(my_bt, comm_type, category, NULL, sending_bytes, false);
 
             if(status) {
                 total_data_length -= sending_bytes;
@@ -580,10 +589,12 @@ bool BluetoothCommunication::send_data(Bluetooth * my_bt, _bluetooth_comm_type c
             }
         }
         Serial.printf("send_data: out of %d bytes, %d sent\n", data_length, end);
+
     } else {
         // copy the data into the buffer
         memcpy(_packet_buffer + _PREAMBLE_SIZE, data_ptr, data_length);
-        // status = _send_data(my_bt, comm_type, NULL, data_length, true);
+        status = _send_data(my_bt, comm_type, category, NULL, data_length, true);
+
     }
 
     return status;

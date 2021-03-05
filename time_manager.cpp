@@ -31,39 +31,6 @@ void show_current_rtc_time() {
 	strftime(s, 50, "%A, %B %d %Y %H:%M:%S", &timeinfo);
   Serial.printf("Current RTC time: %s\n", s);
 
-}
-
-/**
- * Get current RTC epoch time as a string.
- * @param: const char * of length 50
- */
-void get_rtc_epoch_time_as_string(char * buffer) {
-  if(buffer == NULL) {
-    Serial.println("get_rtc_epoch_time_as_string: null buffer");
-  }
-
-  long epoch_time = rtc.getEpoch();
-  snprintf(buffer, 50, "%llu", epoch_time);
-  return;
-}
-
-/**
- * Get current RTC time as string.
- * @param: const char * to store the time string.
- */
-void get_rtc_time_as_string(char * buffer) {
-  if(buffer == NULL) {
-    Serial.println("get_rtc_time_as_string: null buffer");
-  }
-
-  // get the time
-  struct tm timeinfo = rtc.getTimeStruct();
-	
-  // long date format.
-	strftime(buffer, 50, "%A_%B_%d_%Y_%H_%M_%S", &timeinfo);
-  return;
-
-  // return rtc.getTime("%d-%m-%Y:%H-%M-%S");
   // Serial.println(rtc.getTime());          //  (String) 15:24:38
   // Serial.println(rtc.getDate());          //  (String) Sun, Jan 17 2021
   // Serial.println(rtc.getDate(true));      //  (String) Sunday, January 17 2021
@@ -85,18 +52,46 @@ void get_rtc_time_as_string(char * buffer) {
   // Serial.println(rtc.getDayofYear());     //  (int)     16    (0-365)
   // Serial.println(rtc.getMonth());         //  (int)     0     (0-11)
   // Serial.println(rtc.getYear());          //  (int)     2021
-  // return rtc.getTimeDate(true);
 }
 
-// void printLocalTime()
-// {
-//   struct tm timeinfo;
-//   if (!getLocalTime(&timeinfo)) {
-//     Serial.println("Failed to obtain time");
-//     return;
-//   }
-//   Serial.print(&timeinfo, "%A, %B %d %Y %H:%M:%S");//Friday, February 22 2019 22:37:45
-// }
+/**
+ * Get current RTC epoch time as a string.
+ * @param: const char * of length 50
+ */
+void get_rtc_epoch_time_as_string(char * buffer) {
+  if(buffer == NULL) {
+    Serial.println("get_rtc_epoch_time_as_string: null buffer");
+  }
+
+  long epoch_time = rtc.getEpoch();
+  snprintf(buffer, 50, "%d", epoch_time);
+  return;
+}
+
+/**
+ * Get RTC epoch time.
+ * @return: long
+ */
+long get_rtc_epoch_time() {
+  return rtc.getEpoch();
+}
+
+/**
+ * Get current RTC time as string.
+ * @param: const char * to store the time string.
+ */
+void get_rtc_time_as_string(char * buffer) {
+  if(buffer == NULL) {
+    Serial.println("get_rtc_time_as_string: null buffer");
+  }
+
+  // get the time
+  struct tm timeinfo = rtc.getTimeStruct();
+	
+  // long date format.
+	strftime(buffer, 50, "%A_%B_%d_%Y_%H_%M_%S", &timeinfo);
+ }
+
 
 
 /*

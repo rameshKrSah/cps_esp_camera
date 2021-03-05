@@ -92,11 +92,8 @@ bool save_image_to_sd_card(fs::FS &fs, camera_fb_t * fb) {
   }
   
   // Path where new picture will be saved in SD Card
-  char current_time[51];
   show_current_rtc_time();
-  get_rtc_epoch_time_as_string(current_time);
-
-  String path = "/" + String(current_time) +".jpg";
+  String path = "/" + String(get_rtc_epoch_time(), 10) +".jpg";
   Serial.printf("save_image_to_sd_card: file name: %s\n", path.c_str());
 
   // get the file object to write the image data to SD card 

@@ -31,4 +31,10 @@ void set_rtc_time(uint64_t epoch_time);
  */
 void get_rtc_epoch_time_as_string(char * buffer);
 
+/**
+ * Get RTC epoch time.
+ * @return: long
+ */
+long get_rtc_epoch_time();
+
 #endif

@@ -181,6 +181,7 @@ void loop() {
   // my_bluetooth_comm.send_data(&my_bluetooth, BT_RESPONSE, RESPONSE_FOR_OTHER_DATA, buffer, 1024);
   // Serial.println("\n\n********************************\n\n");
   // delay(1000 * 30);
+  delay(portMAX_DELAY);
 }
 
 
@@ -190,7 +191,7 @@ void loop() {
 void bt_data_received_callback(const uint8_t * buff, size_t len) {
     uint8_t totalBytes = int(len);
     if((buff != NULL) && (totalBytes > 0)){
-      Serial.printf("bt_data_received_callback: data length: %d\n", totalBytes);
+      // Serial.printf("bt_data_received_callback: data length: %d\n", totalBytes);
       my_bluetooth.copy_received_data(buff, totalBytes);
     }
 }

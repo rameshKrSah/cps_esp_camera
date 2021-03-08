@@ -229,23 +229,23 @@ void BluetoothCommunication::_create_packet(_bluetooth_comm_type comm_type, uint
     _packet_length += 1;
     
     // set the payload length
-    Serial.printf("_create_packet: payload length %d\n", payload_len);
-    Serial.printf("_create_packet: payload length %d --- %d\n", (uint8_t)((payload_len >> 8) & 0xFF), (uint8_t)(payload_len & 0xFF));
-    Serial.printf("_create_packet: payload length 0x%X --- 0x%X\n", (uint8_t)((payload_len >> 8) & 0xFF), (uint8_t)(payload_len & 0xFF));
+    // Serial.printf("_create_packet: payload length %d\n", payload_len);
+    // Serial.printf("_create_packet: payload length %d --- %d\n", (uint8_t)((payload_len >> 8) & 0xFF), (uint8_t)(payload_len & 0xFF));
+    // Serial.printf("_create_packet: payload length 0x%X --- 0x%X\n", (uint8_t)((payload_len >> 8) & 0xFF), (uint8_t)(payload_len & 0xFF));
     *(_packet_buffer + _packet_length) = (uint8_t)(payload_len & 0xFF);
     *(_packet_buffer + _packet_length + 1) = (uint8_t)((payload_len >> 8) & 0xFF);
-    Serial.printf("_create_packet: 0x%X ------- 0x%X\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
-    Serial.printf("_create_packet: %d ------- %d\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
+    // Serial.printf("_create_packet: 0x%X ------- 0x%X\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
+    // Serial.printf("_create_packet: %d ------- %d\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
     _packet_length += 2;
     
     // packet_number is set by the calling function and is member of the class
-    Serial.printf("_create_packet: packet number %d\n", _packet_number);
-    Serial.printf("_create_packet: packet number %d --- %d\n", (uint8_t)((_packet_number >> 8) & 0xFF), (uint8_t)(_packet_number & 0xFF));
-    Serial.printf("_create_packet: packet number 0x%X --- 0x%X\n", (uint8_t)((_packet_number >> 8) & 0xFF), (uint8_t)(_packet_number & 0xFF));
+    // Serial.printf("_create_packet: packet number %d\n", _packet_number);
+    // Serial.printf("_create_packet: packet number %d --- %d\n", (uint8_t)((_packet_number >> 8) & 0xFF), (uint8_t)(_packet_number & 0xFF));
+    // Serial.printf("_create_packet: packet number 0x%X --- 0x%X\n", (uint8_t)((_packet_number >> 8) & 0xFF), (uint8_t)(_packet_number & 0xFF));
     *(_packet_buffer + _packet_length) = (uint8_t)(_packet_number & 0xFF);
     *(_packet_buffer + _packet_length + 1) = (uint8_t)((_packet_number >> 8) & 0xFF);
-    Serial.printf("_create_packet: 0x%X ------- 0x%X\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
-    Serial.printf("_create_packet: %d ------- %d\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
+    // Serial.printf("_create_packet: 0x%X ------- 0x%X\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
+    // Serial.printf("_create_packet: %d ------- %d\n", *(_packet_buffer + _packet_length), *(_packet_buffer + _packet_length + 1));
     _packet_length += 2;
         
     // Payload is already in the buffer, just increment the payload length
@@ -256,8 +256,7 @@ void BluetoothCommunication::_create_packet(_bluetooth_comm_type comm_type, uint
     _packet_length += payload_len;
     
     // with this we have the packet, return back to the calling function.
-    Serial.printf("_create_packet: length: %d\n", _packet_length);
-    // Serial.printf("_create_packet: packet %s\n", (char *)_packet_buffer);
+    Serial.printf("_create_packet: payload length: %d, packet number: %d, length: %d\n", payload_len, _packet_number, _packet_length);
 }
 
 

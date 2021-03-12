@@ -29,14 +29,15 @@
 #include "bluetooth_comm.h"
 #include "time_manager.h"
 
-#define TIME_TO_SLEEP  180        /* Time ESP32 will go to sleep (in seconds) */
+#define TIME_TO_SLEEP  5 * 60        /* Time ESP32 will go to sleep (in seconds) */
 
 
 // Variable for the Bluetooth
 Bluetooth my_bluetooth;
 BluetoothCommunication my_bluetooth_comm;
 
-// Phone Bluetooth MAC address.
+// Phone Bluetooth MAC address
+// TODO: Need to make this configurable. But how?
 // uint8_t btServerAddress[6] = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E}; // galaxy
 uint8_t btServerAddress[6] = {0x64, 0xa2, 0xf9, 0x3e, 0x95, 0x9d};
 

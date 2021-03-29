@@ -28,9 +28,13 @@
 #include "bluetooth.h"
 #include "bluetooth_comm.h"
 #include "time_manager.h"
+#include "driver/rtc_io.h"
 
 #define TIME_TO_SLEEP  5 * 60        /* Time ESP32 will go to sleep (in seconds) */
 
+
+// THE SYSTEM RESTARTS AFTER 5 FAILED IMAGE TRANSFER.
+RTC_DATA_ATTR int failedBTConnections = 0;
 
 // Variable for the Bluetooth
 Bluetooth my_bluetooth;
@@ -107,7 +111,13 @@ void bluetooth_task(void * params) {
     // // send the data untill done or transmit fixed number of images.
     acquire_sd_mmc();
     my_bluetooth.take_bluetooth_serial_mutex();
-    my_bluetooth_comm.send_next_image(&my_bluetooth, SD_MMC);
+    if(my_bluetooth_comm.send_next_image(&my_bluetooth, SD_MMC) == false) {
+      ++failedBTConnections;
+      if(failedBTConnections == 5) {
+        fflush(stdout);
+        esp_restart();
+      }
+    }
     my_bluetooth.release_bluetooth_serial_mutex();
     release_sd_mmc();
 

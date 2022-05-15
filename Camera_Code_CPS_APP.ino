@@ -29,9 +29,12 @@
 #include "bluetooth_comm.h"
 #include "time_manager.h"
 #include "driver/rtc_io.h"
+#include "esp_bt_main.h"
+#include "esp_bt_device.h"
 
 #define TIME_TO_SLEEP  5 * 60        /* Time ESP32 will go to sleep (in seconds) */
 
+#define VERSION "0.1"
 
 // THE SYSTEM RESTARTS AFTER 5 FAILED IMAGE TRANSFER.
 RTC_DATA_ATTR int failedBTConnections = 0;
@@ -42,11 +45,12 @@ BluetoothCommunication my_bluetooth_comm;
 
 // Phone Bluetooth MAC address
 // TODO: Need to make this configurable. But how?
-// uint8_t btServerAddress[6] = {0xC4, 0x50, 0x06, 0x83, 0xF4, 0x7E}; // galaxy
-uint8_t btServerAddress[6] = {0x64, 0xa2, 0xf9, 0x3e, 0x95, 0x9d};
+uint8_t btServerAddress[6] = {0x18, 0x4e, 0x16, 0x81, 0x8a, 0x4f};
 
 // Deep sleep semaphore
 static SemaphoreHandle_t deep_sleep_semaphore = NULL;
+
+char bda_str[18];
 
 /**
  * We will have two tasks. 
@@ -130,6 +134,29 @@ void bluetooth_task(void * params) {
   }
 }
 
+// Print the Bluetooth MAC address of the device
+void printDeviceAddress() { 
+  const uint8_t* point = esp_bt_dev_get_address();
+  Serial.print("BT MAC Addr: ");
+  for (int i = 0; i < 6; i++) {
+    char str[3];
+    sprintf(str, "%02X", (int)point[i]);
+    Serial.print(str);
+    if (i < 5){
+      Serial.print(":");
+    }
+  }
+}
+
+char *bda2str(const uint8_t* bda, char *str, size_t size)
+{
+  if (bda == NULL || str == NULL || size < 18) {
+    return NULL;
+  }
+  sprintf(str, "%02x:%02x:%02x:%02x:%02x:%02x",
+          bda[0], bda[1], bda[2], bda[3], bda[4], bda[5]);
+  return str;
+}
 
 // Setup Part
 void setup() {
@@ -141,7 +168,13 @@ void setup() {
   // Start the serial communication
   Serial.begin(115200);
   debug("setup: configuring services");
+  Serial.print("EPSL camera firmware version ");
+  Serial.println(VERSION);
 
+  // print Bluetooth MAC address
+  Serial.print("BT MAC Addr: "); 
+  Serial.println(bda2str(esp_bt_dev_get_address(), bda_str, 18));
+  
   // register Bluetooth callback for status update
   my_bluetooth.set_status_callback(bt_status_callback);   // THIS NEEDS TO BE HERE FOR PROPER CALLBACKS
   

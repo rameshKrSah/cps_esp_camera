@@ -23,6 +23,7 @@ static SemaphoreHandle_t _sd_mmc_mutex = NULL;
  */
 bool init_sd_card() {
  // start SD card and verify for the card.
+ // setting, true disable the FLASH LED connected to GPIO4
   debug("init_sd_card: starting SD card");
   if(!SD_MMC.begin("/sdcard", true)){
     Serial.println("init_sd_card: sd card mount failed");

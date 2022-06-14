@@ -20,14 +20,13 @@
  * * If the data type is image type the third byte will indicate the packet 
  * number since image data needs to be divided before transmission. 
  * 
- * The payload starts from 3rd-byte position or 4th-byte position (if image) 
- * data. 
+ * The payload starts from 3rd-byte position or 4th-byte position if image data. 
  * 
- * The last byte will an ending character indicating the end of current
+ * The last byte will be an ending character indicating the end of current
  * transmission. We set it to '#'.
  * 
  * Phone and camera needs to send a response packet after reception of data. 
- * The response will contain the first byte, 1 for the second byte, thrid
+ * The response will contain the first byte, 1 for the second byte, third
  * byte if any, received data length as payload, and the ending character. 
  * 
  * Both phone and camera will wait for 5 seconds for response. 

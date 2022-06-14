@@ -31,10 +31,11 @@
 #include "driver/rtc_io.h"
 #include "esp_bt_main.h"
 #include "esp_bt_device.h"
+#include"esp_gap_bt_api.h"
 
 #define TIME_TO_SLEEP  5 * 60        /* Time ESP32 will go to sleep (in seconds) */
 
-#define VERSION "0.1"
+#define VERSION "0.2"
 
 // THE SYSTEM RESTARTS AFTER 5 FAILED IMAGE TRANSFER.
 RTC_DATA_ATTR int failedBTConnections = 0;
@@ -50,6 +51,7 @@ uint8_t btServerAddress[6] = {0x18, 0x4e, 0x16, 0x81, 0x8a, 0x4f};
 // Deep sleep semaphore
 static SemaphoreHandle_t deep_sleep_semaphore = NULL;
 
+// variable for BT MAC address
 char bda_str[18];
 
 /**
@@ -135,19 +137,6 @@ void bluetooth_task(void * params) {
 }
 
 // Print the Bluetooth MAC address of the device
-void printDeviceAddress() { 
-  const uint8_t* point = esp_bt_dev_get_address();
-  Serial.print("BT MAC Addr: ");
-  for (int i = 0; i < 6; i++) {
-    char str[3];
-    sprintf(str, "%02X", (int)point[i]);
-    Serial.print(str);
-    if (i < 5){
-      Serial.print(":");
-    }
-  }
-}
-
 char *bda2str(const uint8_t* bda, char *str, size_t size)
 {
   if (bda == NULL || str == NULL || size < 18) {
@@ -164,16 +153,16 @@ void setup() {
 
   // Disable brownout detector
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); 
+
+  // turn on the LED1 to show camera is powered on
+  pinMode(33, OUTPUT);
+  digitalWrite(33, LOW);
   
   // Start the serial communication
   Serial.begin(115200);
   debug("setup: configuring services");
   Serial.print("EPSL camera firmware version ");
   Serial.println(VERSION);
-
-  // print Bluetooth MAC address
-  Serial.print("BT MAC Addr: "); 
-  Serial.println(bda2str(esp_bt_dev_get_address(), bda_str, 18));
   
   // register Bluetooth callback for status update
   my_bluetooth.set_status_callback(bt_status_callback);   // THIS NEEDS TO BE HERE FOR PROPER CALLBACKS
@@ -186,6 +175,10 @@ void setup() {
     go_to_deep_sleep(TIME_TO_SLEEP);
   }
 
+  // print Bluetooth MAC address
+  Serial.print("BT MAC Addr: "); 
+  Serial.println(bda2str(esp_bt_dev_get_address(), bda_str, 18));
+  
   // register the bluetooth callback for on receive 
   my_bluetooth.set_on_receive_data_callback(bt_data_received_callback);
 

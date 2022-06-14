@@ -24,7 +24,7 @@ void debug(const char * message){
  * Put's the ESP32 to deep sleep.
  */
 void go_to_deep_sleep(long sleep_time_seconds) {
-  debug("go_to_deep_sleep");
+  Serial.println("go_to_deep_sleep");
   
   // configure the timer to wake up
   esp_sleep_enable_timer_wakeup(sleep_time_seconds * uS_TO_S_FACTOR);
